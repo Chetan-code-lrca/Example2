@@ -124,10 +124,20 @@ pub struct AssetRecord {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum AssetSource {
-    LocalFile { path: String },
-    Generated { provider: String, request_id: Option<String> },
-    Remote { uri: String },
-    Upstream { project: String, uri: String },
+    LocalFile {
+        path: String,
+    },
+    Generated {
+        provider: String,
+        request_id: Option<String>,
+    },
+    Remote {
+        uri: String,
+    },
+    Upstream {
+        project: String,
+        uri: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
