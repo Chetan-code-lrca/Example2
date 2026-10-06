@@ -11,12 +11,19 @@ pub const COMMAND_PROTOCOL: &str = "praxilume.command/v1";
 pub struct Id(String);
 
 impl Id {
-    pub fn new(value: impl Into<String>) -> Self { Self(value.into()) }
-    pub fn as_str(&self) -> &str { &self.0 }
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl From<&str> for Id {
-    fn from(value: &str) -> Self { Self::new(value) }
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,8 +164,13 @@ pub struct CommandEnvelope {
 }
 
 impl CommandEnvelope {
-    pub fn new(command_id: impl Into<Id>, actor: Actor, intent: impl Into<String>,
-               command: impl Into<String>, params: serde_json::Value) -> Self {
+    pub fn new(
+        command_id: impl Into<Id>,
+        actor: Actor,
+        intent: impl Into<String>,
+        command: impl Into<String>,
+        params: serde_json::Value,
+    ) -> Self {
         Self {
             protocol: COMMAND_PROTOCOL.to_owned(),
             command_id: command_id.into(),
@@ -233,7 +245,9 @@ mod tests {
             name: "Rectangle".to_owned(),
             properties: BTreeMap::new(),
         };
-        let record = project.apply(&Operation::CreateObject(object)).expect("apply");
+        let record = project
+            .apply(&Operation::CreateObject(object))
+            .expect("apply");
         assert_eq!(project.revision, 1);
         assert_eq!(record.revision, 1);
     }
@@ -247,7 +261,9 @@ mod tests {
             name: "Rectangle".to_owned(),
             properties: BTreeMap::new(),
         };
-        project.apply(&Operation::CreateObject(object.clone())).expect("first");
+        project
+            .apply(&Operation::CreateObject(object.clone()))
+            .expect("first");
         assert!(matches!(
             project.apply(&Operation::CreateObject(object)),
             Err(CoreError::DuplicateId(_))
