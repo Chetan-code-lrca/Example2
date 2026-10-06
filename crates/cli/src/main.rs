@@ -233,13 +233,7 @@ fn guess_media_type(extension: &str) -> String {
     .to_owned()
 }
 
-fn bridge(
-    port: u16,
-    token: &str,
-    command: String,
-    intent: String,
-    params: String,
-) -> Result<()> {
+fn bridge(port: u16, token: &str, command: String, intent: String, params: String) -> Result<()> {
     let params: serde_json::Value =
         serde_json::from_str(&params).context("params must be valid JSON")?;
     let envelope = CommandEnvelope::new("bridge-1", Actor::User, intent, command, params);
