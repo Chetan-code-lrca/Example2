@@ -6,7 +6,11 @@ use praxilume_runtime::ProjectStore;
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
-#[command(name = "praxilume", version, about = "Structured creative engine + agent control plane")]
+#[command(
+    name = "praxilume",
+    version,
+    about = "Structured creative engine + agent control plane"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -19,7 +23,9 @@ enum Command {
         #[arg(long, default_value = "Untitled")]
         name: String,
     },
-    Inspect { path: PathBuf },
+    Inspect {
+        path: PathBuf,
+    },
     Rename {
         path: PathBuf,
         #[arg(long)]
@@ -60,18 +66,33 @@ fn main() -> Result<()> {
         Command::Init { path, name } => init(path, name),
         Command::Inspect { path } => inspect(path),
         Command::Rename { path, name } => rename(path, name),
-        Command::Import { path, source, extension } => import_asset(path, source, extension),
-        Command::Command { path, command, actor, params, dry_run } => {
-            run_command(path, command, actor, params, dry_run)
-        }
-        Command::Artcraft { port, token, command, intent, params } => {
-            bridge(port, &token, command, intent, params)
-        }
+        Command::Import {
+            path,
+            source,
+            extension,
+        } => import_asset(path, source, extension),
+        Command::Command {
+            path,
+            command,
+            actor,
+            params,
+            dry_run,
+        } => run_command(path, command, actor, params, dry_run),
+        Command::Artcraft {
+            port,
+            token,
+            command,
+            intent,
+            params,
+        } => bridge(port, &token, command, intent, params),
     }
 }
 
 fn init(path: PathBuf, name: String) -> Result<()> {
-    let id = path.file_name().and_then(|s| s.to_str()).unwrap_or("project");
+    let id = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("project");
     ProjectStore::create(&path, &Project::new(id, name))?;
     println!("created {}", path.display());
     Ok(())
@@ -134,7 +155,7 @@ fn run_command(
                 .params
                 .get("name")
                 .and_then(|value| value.as_str())
-                .context("project.rename requires {"name": string}")?;
+                .context("project.rename requires {\"name\": string}")?;
             project.apply(&Operation::SetMetadata {
                 key: "display_name".into(),
                 value: name.into(),
@@ -142,10 +163,12 @@ fn run_command(
             project.name = name.into();
             store.save(&project)?;
         }
-        command => anyhow::bail!(
-            "command '{}' is not implemented in core; route it to a capability adapter",
-            command
-        ),
+        command => {
+            anyhow::bail!(
+                "command '{}' is not implemented in core; route it to a capability adapter",
+                command
+            )
+        }
     }
 
     println!("applied {}", envelope.command);
@@ -156,12 +179,12 @@ fn parse_actor(value: &str) -> Result<Actor> {
     match value {
         "user" => Ok(Actor::User),
         "system" => Ok(Actor::System),
-        value if value.starts_with("agent:") && value.len() > 6 => {
-            Ok(Actor::Agent { agent_id: Id::new(&value[6..]) })
-        }
-        value if value.starts_with("automation:") && value.len() > 11 => {
-            Ok(Actor::Automation { workflow_id: Id::new(&value[11..]) })
-        }
+        value if value.starts_with("agent:") && value.len() > 6 => Ok(Actor::Agent {
+            agent_id: Id::new(&value[6..]),
+        }),
+        value if value.starts_with("automation:") && value.len() > 11 => Ok(Actor::Automation {
+            workflow_id: Id::new(&value[11..]),
+        }),
         _ => anyhow::bail!("unknown actor '{value}'"),
     }
 }
@@ -206,7 +229,8 @@ fn guess_media_type(extension: &str) -> String {
         "mov" => "video/quicktime",
         "wav" => "audio/wav",
         _ => "application/octet-stream",
-    }.to_owned()
+    }
+    .to_owned()
 }
 
 fn bridge(
