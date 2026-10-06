@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use praxilume_core::{AgentPolicy, Actor, Capability, CommandEnvelope, Project};
+use praxilume_core::{Actor, AgentPolicy, Capability, CommandEnvelope, Project};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -45,7 +45,9 @@ impl ProjectStore {
         Ok(store)
     }
 
-    pub fn root(&self) -> &Path { &self.root }
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
 
     fn ensure_layout(&self) -> Result<()> {
         fs::create_dir_all(self.root.join("assets"))?;
@@ -66,10 +68,16 @@ impl ProjectStore {
     }
 
     pub fn asset_path(&self, sha256: &str, extension: &str) -> PathBuf {
-        self.root.join("assets").join(format!("{sha256}.{extension}"))
+        self.root
+            .join("assets")
+            .join(format!("{sha256}.{extension}"))
     }
 
-    pub fn import_asset(&self, source: &Path, extension: &str) -> Result<(String, PathBuf)> {
+    pub fn import_asset(
+        &self,
+        source: &Path,
+        extension: &str,
+    ) -> Result<(String, PathBuf)> {
         validate_extension(extension)?;
         let bytes = fs::read(source)
             .with_context(|| format!("failed to read asset {}", source.display()))?;
@@ -85,12 +93,14 @@ impl ProjectStore {
         Ok((sha256, target))
     }
 
-    pub fn authorize_command(policy: &AgentPolicy, envelope: &CommandEnvelope) -> Result<()> {
+    pub fn authorize_command(
+        policy: &AgentPolicy,
+        envelope: &CommandEnvelope,
+    ) -> Result<()> {
         match &envelope.actor {
-            Actor::Agent { .. } | Actor::Automation { .. } => {
-                policy.authorize(&Capability::ExecuteCreativeCommand)
-                    .map_err(anyhow::Error::msg)
-            }
+            Actor::Agent { .. } | Actor::Automation { .. } => policy
+                .authorize(&Capability::ExecuteCreativeCommand)
+                .map_err(anyhow::Error::msg),
             Actor::User | Actor::System => Ok(()),
         }
     }
@@ -114,8 +124,7 @@ fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<()> {
 }
 
 fn read_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T> {
-    let bytes = fs::read(path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     Ok(serde_json::from_slice(&bytes)?)
 }
 
