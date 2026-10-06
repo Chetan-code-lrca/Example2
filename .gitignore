@@ -1,0 +1,6 @@
+/target/
+*.prax/tmp/
+*.prax/history/*.tmp
+.DS_Store
+.idea/
+.vscode/
