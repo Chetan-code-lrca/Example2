@@ -1,0 +1,17 @@
+[package]
+name = "praxilume-runtime"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Project persistence, deterministic manifests, content-addressed assets, and command authorization."
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow.workspace = true
+praxilume-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
