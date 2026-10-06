@@ -73,11 +73,7 @@ impl ProjectStore {
             .join(format!("{sha256}.{extension}"))
     }
 
-    pub fn import_asset(
-        &self,
-        source: &Path,
-        extension: &str,
-    ) -> Result<(String, PathBuf)> {
+    pub fn import_asset(&self, source: &Path, extension: &str) -> Result<(String, PathBuf)> {
         validate_extension(extension)?;
         let bytes = fs::read(source)
             .with_context(|| format!("failed to read asset {}", source.display()))?;
@@ -93,10 +89,7 @@ impl ProjectStore {
         Ok((sha256, target))
     }
 
-    pub fn authorize_command(
-        policy: &AgentPolicy,
-        envelope: &CommandEnvelope,
-    ) -> Result<()> {
+    pub fn authorize_command(policy: &AgentPolicy, envelope: &CommandEnvelope) -> Result<()> {
         match &envelope.actor {
             Actor::Agent { .. } | Actor::Automation { .. } => policy
                 .authorize(&Capability::ExecuteCreativeCommand)
