@@ -26,6 +26,12 @@ impl From<&str> for Id {
     }
 }
 
+impl From<String> for Id {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     pub schema_version: u32,
