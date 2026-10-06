@@ -24,8 +24,6 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 
 **Milestone 0 — Foundation is implemented.**
 
-The Rust workspace now contains:
-
 ```text
 praxilume/
 ├── crates/
@@ -53,17 +51,17 @@ praxilume artcraft 7654 --token "$ARTCRAFT_TOKEN" --command app.status
 
 ```text
 Praxilume UI / CLI / Agent / Automation
-                  │
+                  |
            praxilume.command/v1
-                  │
+                  |
           Praxilume runtime
-                  │
-      ┌───────────┼────────────┐
-      │           │            │
-  project      asset graph   policy
-      │
+                  |
+      +-----------+-------------+
+      |           |             |
+  project      asset graph    policy
+      |
  capability adapters
-      │
+      |
  ArtCraft / other specialist engines
 ```
 
@@ -75,29 +73,39 @@ Every milestone follows:
 
 ```text
 README updated
-    ↓
+    |
 implementation
-    ↓
+    |
 static verification
-    ↓
-GitHub Actions cargo fmt + cargo test
-    ↓
+    |
+GitHub Actions: cargo fmt + cargo test
+    |
 promote verified commit to main
 ```
 
-This environment does not contain a Rust toolchain, so local `cargo test` cannot be executed here. The repository CI workflow is configured to run formatting and workspace tests on GitHub.
+The first foundation CI pass is green: Rustfmt completed successfully and the workspace tests passed (6 tests total across the core and runtime crates, plus successful compile/doc-test stages).
 
 ## Repository naming
 
 The connected GitHub API can create branches and write commits but does not expose repository-create or repository-rename operations. The codebase therefore uses the intended product name **Praxilume**, while the current remote bootstrap repository is still named `Example2`.
 
-After the initial foundation is promoted, rename the repository to **`praxilume`** in GitHub Settings when the repository UI is available.
+The intended final remote name is **`praxilume`**. Rename the repository in GitHub Settings when repository administration is available.
 
 ## Upstream reference
 
-The seven ArtCraft applications we use as architectural and integration references are documented in [`docs/upstream.md`](docs/upstream.md).
+The seven ArtCraft applications are treated as capability references/providers:
 
-Upstream code remains under its original licenses and notices. Praxilume does not relicense upstream code.
+- PhotoCraft
+- VectorCraft
+- FilmCraft
+- LightCraft
+- PrintCraft
+- EffectCraft
+- DesignCraft
+
+Their repositories, integration boundaries, and license separation are documented in [`docs/upstream.md`](docs/upstream.md).
+
+Praxilume does not relicense upstream software.
 
 ## License
 
