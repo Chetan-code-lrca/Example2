@@ -12,64 +12,93 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 
 ## What this project adds
 
-- Structured editable project state instead of flattened AI output.
-- SHA-256 content identity and asset provenance.
-- A single `praxilume.command/v1` envelope for UI, CLI, automation, and agents.
-- Agent capabilities with deny-by-default authorization.
-- An upstream adapter boundary for compatible ArtCraft control channels.
-- Deterministic project persistence with atomic JSON writes.
-- A roadmap for image, vector, video, motion, photo, publishing, and PDF capability packs.
+- **Structured editable projects** instead of flattened AI output.
+- **SHA-256 asset identity and provenance** for source, license, attribution, and tags.
+- **One command protocol**: `praxilume.command/v1`.
+- **Deny-by-default agent capabilities** for project, asset, network, export, and upstream-tool access.
+- **Upstream adapters** so existing specialist engines can be reused instead of rewritten.
+- **Atomic project persistence** with a deterministic project layout.
+- **Capability-pack roadmap** for image, vector, video, motion, photo, publishing, and PDF workflows.
 
-## Repository status
+## Current milestone
 
-**Milestone 0 — Foundation**
+**Milestone 0 — Foundation is implemented.**
 
-The workspace is being bootstrapped on a temporary GitHub repository because the connected GitHub interface does not expose repository-creation or rename operations. The intended final repository name is **`praxilume`**.
-
-Current work is developed on `praxilume-foundation` and promoted to `main` only after verification.
-
-## Workspace
+The Rust workspace now contains:
 
 ```text
 praxilume/
 ├── crates/
-│   ├── core/             # shared project + command + policy model
+│   ├── core/             # shared project model + commands + policy
 │   ├── runtime/          # project persistence + content-addressed assets
 │   ├── artcraft-bridge/  # controlled JSON-lines upstream adapter
-│   └── cli/              # praxilume command line interface
+│   └── cli/              # functional command line interface
 ├── docs/
 ├── schemas/
 └── .github/workflows/
 ```
 
-## Quick start
+The CLI supports:
 
 ```bash
-cargo test --workspace
-cargo run -p praxilume -- init demo.prax --name "First Project"
-cargo run -p praxilume -- inspect demo.prax
+praxilume init demo.prax --name "First Project"
+praxilume inspect demo.prax
+praxilume rename demo.prax --name "Poster Lab"
+praxilume import demo.prax ./image.png --extension png
+praxilume command demo.prax --command project.rename --params '{"name":"Poster Lab"}'
+praxilume artcraft 7654 --token "$ARTCRAFT_TOKEN" --command app.status
 ```
 
-## Integration principle
+## Architecture
 
 ```text
 Praxilume UI / CLI / Agent / Automation
                   │
-            command envelope
+           praxilume.command/v1
                   │
           Praxilume runtime
                   │
       ┌───────────┼────────────┐
       │           │            │
-  own project   asset graph  policy
+  project      asset graph   policy
       │
-  capability adapters
+ capability adapters
       │
-  ArtCraft / other specialist engines
+ ArtCraft / other specialist engines
 ```
 
-Upstream attribution and licensing are documented in [`docs/upstream.md`](docs/upstream.md).
+The core deliberately stays independent of renderers and codecs. Those belong behind capability boundaries.
+
+## Verification policy
+
+Every milestone follows:
+
+```text
+README updated
+    ↓
+implementation
+    ↓
+static verification
+    ↓
+GitHub Actions cargo fmt + cargo test
+    ↓
+promote verified commit to main
+```
+
+This environment does not contain a Rust toolchain, so local `cargo test` cannot be executed here. The repository CI workflow is configured to run formatting and workspace tests on GitHub.
+
+## Repository naming
+
+The connected GitHub API can create branches and write commits but does not expose repository-create or repository-rename operations. The codebase therefore uses the intended product name **Praxilume**, while the current remote bootstrap repository is still named `Example2`.
+
+After the initial foundation is promoted, rename the repository to **`praxilume`** in GitHub Settings when the repository UI is available.
+
+## Upstream reference
+
+The seven ArtCraft applications we use as architectural and integration references are documented in [`docs/upstream.md`](docs/upstream.md).
+
+Upstream code remains under its original licenses and notices. Praxilume does not relicense upstream code.
 
 ## License
 
-Praxilume source is Apache-2.0. Upstream components retain their own licenses, notices, and attribution requirements.
+Praxilume source is Apache-2.0.
