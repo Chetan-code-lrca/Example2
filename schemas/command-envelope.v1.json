@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://praxilume.dev/schema/command-envelope/v1",
+  "title": "Praxilume Command Envelope v1",
+  "type": "object",
+  "required": ["protocol", "command_id", "issued_at", "actor", "intent", "command", "params", "dry_run"],
+  "properties": {
+    "protocol": { "const": "praxilume.command/v1" },
+    "command_id": { "type": "string", "minLength": 1 },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "actor": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["user", "agent", "automation", "system"] },
+        "agent_id": { "type": "string", "minLength": 1 },
+        "workflow_id": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "intent": { "type": "string" },
+    "command": { "type": "string", "minLength": 1 },
+    "params": {},
+    "dry_run": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
