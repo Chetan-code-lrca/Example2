@@ -1,0 +1,15 @@
+[package]
+name = "praxilume-artcraft-bridge"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Controlled JSON-lines bridge for compatible ArtCraft applications."
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow.workspace = true
+praxilume-core = { path = "../core" }
+serde_json.workspace = true
