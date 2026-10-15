@@ -569,11 +569,7 @@ mod tests {
     #[test]
     fn filmcraft_frames_match_documented_control_protocol() {
         assert_eq!(
-            control_method_frame(
-                "praxilume-filmcraft-commands",
-                "engine.commands",
-                json!({})
-            ),
+            control_method_frame("praxilume-filmcraft-commands", "engine.commands", json!({})),
             json!({
                 "id": "praxilume-filmcraft-commands",
                 "method": "engine.commands",
@@ -596,14 +592,15 @@ mod tests {
 
     #[test]
     fn filmcraft_success_responses_are_validated() {
-        assert!(ensure_filmcraft_success(
-            &json!({"id":"request-1","ok":true,"result":{}}),
-            "test"
-        ).is_ok());
+        assert!(
+            ensure_filmcraft_success(&json!({"id":"request-1","ok":true,"result":{}}), "test")
+                .is_ok()
+        );
         let error = ensure_filmcraft_success(
             &json!({"id":"request-1","ok":false,"error":"no active sequence"}),
-            "command"
-        ).expect_err("failed response must be reported");
+            "command",
+        )
+        .expect_err("failed response must be reported");
         assert!(error.to_string().contains("no active sequence"));
         assert!(ensure_filmcraft_success(&json!({"id":"request-1"}), "test").is_err());
     }
