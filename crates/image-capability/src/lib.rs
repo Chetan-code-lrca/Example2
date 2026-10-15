@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use praxilume_core::{Actor, COMMAND_PROTOCOL, CommandEnvelope};
+use praxilume_core::{Actor, CommandEnvelope};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -437,7 +437,7 @@ impl ImageOperation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use praxilume_core::Id;
+    use praxilume_core::{COMMAND_PROTOCOL, Id};
 
     #[test]
     fn operation_creates_stable_praxilume_envelope() {
