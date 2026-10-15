@@ -92,7 +92,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The foundation milestone previously passed Rustfmt and all workspace tests. The image-command-pack branch is awaiting its own CI run before promotion.
+The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726): `cargo fmt --all -- --check` and `cargo test --workspace` both passed, including 16 unit tests across the CLI, image capability, bridge, core, and runtime crates plus doc-test stages.
 
 ## Repository naming
 
