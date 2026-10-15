@@ -61,6 +61,20 @@ enum Command {
         #[arg(long, default_value = "{}")]
         params: String,
     },
+    #[command(name = "photocraft-open", about = "Open an image beneath PhotoCraft's configured automation read root")]
+    PhotoCraftOpen {
+        port: u16,
+        path: String,
+        #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
+        token: Option<String>,
+    },
+    #[command(name = "photocraft-save", about = "Save/export an open document beneath PhotoCraft's configured automation write root")]
+    PhotoCraftSave {
+        port: u16,
+        path: String,
+        #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
+        token: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -88,12 +102,28 @@ fn main() -> Result<()> {
             intent,
             params,
         } => {
-            let token = token
-                .or_else(|| std::env::var("PHOTOCRAFT_CONTROL_TOKEN").ok())
-                .context("provide --token or set PHOTOCRAFT_CONTROL_TOKEN")?;
+            let token = resolve_control_token(token)?;
             bridge(port, &token, command, intent, params)
         }
+        Command::PhotoCraftOpen { port, path, token } => {
+            let token = resolve_control_token(token)?;
+            let response = ControlEndpoint::localhost(port).open_document(&path, Some(&token))?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
+        Command::PhotoCraftSave { port, path, token } => {
+            let token = resolve_control_token(token)?;
+            let response = ControlEndpoint::localhost(port).save_document(&path, Some(&token))?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
     }
+}
+
+fn resolve_control_token(token: Option<String>) -> Result<String> {
+    token
+        .or_else(|| std::env::var("PHOTOCRAFT_CONTROL_TOKEN").ok())
+        .context("provide --token or set PHOTOCRAFT_CONTROL_TOKEN")
 }
 
 fn init(path: PathBuf, name: String) -> Result<()> {
@@ -253,4 +283,48 @@ fn bridge(port: u16, token: &str, command: String, intent: String, params: Strin
 fn list_image_commands() -> Result<()> {
     println!("{}", serde_json::to_string_pretty(IMAGE_COMMAND_CATALOG)?);
     Ok(())
+}
+
+
+#[cfg(test)]
+mod cli_tests {
+    use super::*;
+
+    #[test]
+    fn parses_root_scoped_photocraft_open_command() {
+        let cli = Cli::try_parse_from([
+            "praxilume",
+            "photocraft-open",
+            "7878",
+            "assets/input.png",
+        ])
+        .expect("valid open CLI");
+        match cli.command {
+            Command::PhotoCraftOpen { port, path, token } => {
+                assert_eq!(port, 7878);
+                assert_eq!(path, "assets/input.png");
+                assert!(token.is_none());
+            }
+            _ => panic!("expected photocraft-open subcommand"),
+        }
+    }
+
+    #[test]
+    fn parses_root_scoped_photocraft_save_command() {
+        let cli = Cli::try_parse_from([
+            "praxilume",
+            "photocraft-save",
+            "7878",
+            "exports/edited.png",
+        ])
+        .expect("valid save CLI");
+        match cli.command {
+            Command::PhotoCraftSave { port, path, token } => {
+                assert_eq!(port, 7878);
+                assert_eq!(path, "exports/edited.png");
+                assert!(token.is_none());
+            }
+            _ => panic!("expected photocraft-save subcommand"),
+        }
+    }
 }

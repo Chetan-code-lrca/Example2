@@ -30,15 +30,12 @@ impl ControlEndpoint {
             host: "127.0.0.1".to_owned(),
             port,
             connect_timeout: Duration::from_secs(3),
-            // PhotoCraft permits a command to take up to 60 seconds to reply.
+            // PhotoCraft's desktop control server allows up to 60 seconds for a reply.
             read_timeout: Duration::from_secs(65),
         }
     }
 
-    /// Send a Praxilume command through PhotoCraft's authenticated control protocol.
-    ///
-    /// PhotoCraft expects an authentication frame before any other request on each
-    /// TCP connection. Praxilume commands are then wrapped in engine.execute.
+    /// Send a Praxilume engine command through PhotoCraft's authenticated control protocol.
     pub fn send(&self, envelope: &CommandEnvelope, token: Option<&str>) -> Result<Value> {
         if envelope.dry_run {
             return Ok(json!({
@@ -51,6 +48,49 @@ impl ControlEndpoint {
         }
 
         validate_engine_params(&envelope.params)?;
+        let frame = command_frame(envelope);
+        self.send_request(
+            envelope.command_id.as_str(),
+            &frame,
+            token,
+            &format!("command '{}'", envelope.command),
+        )
+    }
+
+    /// Open a file under PhotoCraft's configured automation read root.
+    ///
+    /// The desktop control protocol applies the root capability. Praxilume also rejects
+    /// absolute and traversal paths before sending the request.
+    pub fn open_document(&self, relative_path: &str, token: Option<&str>) -> Result<Value> {
+        validate_relative_path(relative_path)?;
+        let frame = control_method_frame(
+            "praxilume-open",
+            "app.open",
+            json!({ "path": relative_path }),
+        );
+        self.send_request("praxilume-open", &frame, token, "app.open")
+    }
+
+    /// Export/save an open document under PhotoCraft's configured automation write root.
+    ///
+    /// The parent output directory must already exist. Use a dedicated write root for exports.
+    pub fn save_document(&self, relative_path: &str, token: Option<&str>) -> Result<Value> {
+        validate_relative_path(relative_path)?;
+        let frame = control_method_frame(
+            "praxilume-save",
+            "app.save",
+            json!({ "path": relative_path }),
+        );
+        self.send_request("praxilume-save", &frame, token, "app.save")
+    }
+
+    fn send_request(
+        &self,
+        request_id: &str,
+        request: &Value,
+        token: Option<&str>,
+        phase: &str,
+    ) -> Result<Value> {
         let token = token.context("a PhotoCraft control token is required for bridge calls")?;
         if token.trim().is_empty() {
             bail!("a non-empty PhotoCraft control token is required for bridge calls");
@@ -63,10 +103,9 @@ impl ControlEndpoint {
         let mut stream = TcpStream::connect_timeout(&addr, self.connect_timeout)?;
         stream.set_read_timeout(Some(self.read_timeout))?;
         stream.set_write_timeout(Some(self.connect_timeout))?;
-
-        // Keep one socket for writing and a cloned handle for buffered line reads.
         let mut reader = BufReader::new(stream.try_clone()?);
 
+        // PhotoCraft requires authentication as the first frame on each TCP connection.
         write_json_line(&mut stream, &authentication_frame(token))?;
         let auth_response = read_json_line(&mut reader, "authentication")?;
         if auth_response.get("id") != Some(&json!("auth")) {
@@ -74,12 +113,12 @@ impl ControlEndpoint {
         }
         ensure_success(&auth_response, "authentication")?;
 
-        write_json_line(&mut stream, &command_frame(envelope))?;
-        let response = read_json_line(&mut reader, "command")?;
-        if response.get("id") != Some(&json!(envelope.command_id.as_str())) {
-            bail!("PhotoCraft control response ID did not match the command request");
+        write_json_line(&mut stream, request)?;
+        let response = read_json_line(&mut reader, phase)?;
+        if response.get("id") != Some(&json!(request_id)) {
+            bail!("PhotoCraft control response ID did not match the request");
         }
-        ensure_success(&response, &format!("command '{}'", envelope.command))?;
+        ensure_success(&response, phase)?;
         Ok(response)
     }
 }
@@ -105,6 +144,31 @@ fn command_frame(envelope: &CommandEnvelope) -> Value {
             "params": envelope.params,
         },
     })
+}
+
+fn control_method_frame(id: &str, method: &str, params: Value) -> Value {
+    json!({
+        "id": id,
+        "method": method,
+        "params": params,
+    })
+}
+
+fn validate_relative_path(path: &str) -> Result<()> {
+    let invalid = path.is_empty()
+        || path.trim() != path
+        || path.contains('\0')
+        || path.contains('\\')
+        || path.contains(':')
+        || path
+            .split('/')
+            .any(|part| part.is_empty() || part == "." || part == "..");
+    if invalid {
+        bail!(
+            "path must be normalized and relative to PhotoCraft's configured automation root; absolute paths, '.', '..', backslashes, drive prefixes, and empty path segments are not allowed"
+        );
+    }
+    Ok(())
 }
 
 fn validate_engine_params(params: &Value) -> Result<()> {
@@ -207,6 +271,37 @@ mod tests {
         assert!(validate_engine_params(&Value::Null).is_ok());
         assert!(validate_engine_params(&json!(["wrong"])).is_err());
         assert!(validate_engine_params(&json!("wrong")).is_err());
+    }
+
+    #[test]
+    fn control_method_frames_are_explicit_and_token_free() {
+        assert_eq!(
+            control_method_frame("praxilume-open", "app.open", json!({"path": "assets/input.png"})),
+            json!({
+                "id": "praxilume-open",
+                "method": "app.open",
+                "params": {"path": "assets/input.png"}
+            })
+        );
+    }
+
+    #[test]
+    fn root_scoped_paths_reject_absolute_and_traversal_forms() {
+        for path in [
+            "",
+            "/etc/passwd",
+            "../outside.png",
+            "assets/../outside.png",
+            "assets//photo.png",
+            "./assets/photo.png",
+            r"C:\\Windows\\photo.png",
+            "C:/Windows/photo.png",
+            "assets/photo.png\\",
+        ] {
+            assert!(validate_relative_path(path).is_err(), "path accepted: {path:?}");
+        }
+        assert!(validate_relative_path("assets/photo.png").is_ok());
+        assert!(validate_relative_path("exports/final.png").is_ok());
     }
 
     #[test]

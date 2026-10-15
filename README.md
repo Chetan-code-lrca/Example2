@@ -46,10 +46,14 @@ praxilume rename demo.prax --name "Poster Lab"
 praxilume import demo.prax ./image.png --extension png
 praxilume command demo.prax --command project.rename --params '{"name":"Poster Lab"}'
 praxilume image-commands  # list canonical image command IDs and upstream mappings
-# PhotoCraft must be running with control enabled, and a document should be open.
+# Start PhotoCraft with dedicated roots; create exports/ beneath the write root first.
+photocraft --control 7878 --control-token-file /private/path/photocraft-control.token \
+  --automation-read-root /work/project --automation-write-root /work/project
 export PHOTOCRAFT_CONTROL_TOKEN="$(cat /private/path/photocraft-control.token)"
+praxilume photocraft-open 7878 assets/source.png
 praxilume artcraft 7878 --command image.invert
 praxilume artcraft 7878 --command image.crop --params '{"x":0,"y":0,"width":800,"height":600}'
+praxilume photocraft-save 7878 exports/edited.png
 ```
 
 ## Architecture
@@ -74,7 +78,7 @@ The core deliberately stays independent of renderers and codecs. Those belong be
 
 ### PhotoCraft bridge status
 
-The first upstream adapter follows PhotoCraft's authenticated loopback protocol: authenticate first, then invoke `engine.execute`. It validates parameters and response IDs, surfaces upstream errors, and allows up to 65 seconds for PhotoCraft's documented 60-second response window. The CLI accepts `PHOTOCRAFT_CONTROL_TOKEN` when `--token` is omitted; prefer the environment variable to avoid exposing the secret in process arguments. The `praxilume.image/v1` catalog maps six canonical commands—`image.invert`, `image.crop`, `image.resize`, `image.brightness_contrast`, `image.layer.create`, and `image.layer.move`—to verified PhotoCraft engine commands. These edits target an already-open document; path-scoped open/export workflows remain pending.
+The first upstream adapter follows PhotoCraft's authenticated loopback protocol: authenticate first, then invoke `engine.execute`. It validates parameters and response IDs, surfaces upstream errors, and allows up to 65 seconds for PhotoCraft's documented 60-second response window. The CLI accepts `PHOTOCRAFT_CONTROL_TOKEN` when `--token` is omitted; prefer the environment variable to avoid exposing the secret in process arguments. The `praxilume.image/v1` catalog maps six canonical commands—`image.invert`, `image.crop`, `image.resize`, `image.brightness_contrast`, `image.layer.create`, and `image.layer.move`—to verified PhotoCraft engine commands. The `photocraft-open` and `photocraft-save` commands use PhotoCraft's `app.open`/`app.save` methods. They reject absolute paths, parent traversal, backslashes and drive-qualified paths; PhotoCraft separately confines paths beneath its configured read/write roots. Export directories must already exist.
 
 ## Verification policy
 
@@ -92,7 +96,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726): `cargo fmt --all -- --check` and `cargo test --workspace` both passed, including 16 unit tests across the CLI, image capability, bridge, core, and runtime crates plus doc-test stages.
+The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726): `cargo fmt --all -- --check` and `cargo test --workspace` both passed, including 16 unit tests plus doc-test stages. The scoped file-I/O addition is awaiting its own CI run before promotion.
 
 ## Repository naming
 
