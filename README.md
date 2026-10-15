@@ -22,7 +22,7 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 
 ## Current milestone
 
-**Foundation is verified; Phase 2 now includes typed image edits, adjustment layers, and Smart Filter stack controls.**
+**Phase 2 image editing is verified; Phase 3 now has an initial typed VectorCraft capability and loopback adapter.**
 
 ```text
 praxilume/
@@ -54,6 +54,14 @@ praxilume photocraft-open 7878 assets/source.png
 praxilume artcraft 7878 --command image.invert
 praxilume artcraft 7878 --command image.crop --params '{"x":0,"y":0,"width":800,"height":600}'
 praxilume photocraft-save 7878 exports/edited.png
+
+# Start VectorCraft with roots that already exist; its control port has no authentication.
+vectorcraft --control 7979 --automation-read-root /work/vector --automation-write-root /work/vector/out
+praxilume vectorcraft-open 7979 assets/logo.svg
+praxilume vectorcraft 7979 --command vector.rectangle --params '{"x":20,"y":20,"width":180,"height":80,"radius":8}'
+praxilume vectorcraft 7979 --command vector.paint.fill --params '{"color":"#cc66aa"}'
+praxilume vectorcraft-export 7979 out/logo.svg
+praxilume vector-commands
 ```
 
 ## Architecture
@@ -80,6 +88,12 @@ The core deliberately stays independent of renderers and codecs. Those belong be
 
 The first upstream adapter follows PhotoCraft's authenticated loopback protocol: authenticate first, then invoke `engine.execute`. It validates parameters and response IDs, surfaces upstream errors, and allows up to 65 seconds for PhotoCraft's documented 60-second response window. The CLI accepts `PHOTOCRAFT_CONTROL_TOKEN` when `--token` is omitted; prefer the environment variable to avoid exposing the secret in process arguments. The `praxilume.image/v1` catalog maps canonical commands for image edits, Hue/Saturation, Levels and Curves adjustment layers, and Smart Filter preparation, blur, parameter editing, visibility, ordering, deletion and enable/disable to verified PhotoCraft engine commands. The `photocraft-open` and `photocraft-save` commands use PhotoCraft's `app.open`/`app.save` methods. They reject absolute paths, parent traversal, backslashes and drive-qualified paths; PhotoCraft separately confines paths beneath its configured read/write roots. Export directories must already exist. To use non-destructive effects, create an adjustment layer or prepare the target layer for Smart Filters before adding a filter. For example: `praxilume artcraft 7878 --command image.smart_filter.prepare`, followed by `praxilume artcraft 7878 --command image.smart_filter.gaussian_blur --params '{"radius":3}'`. A regular raster layer may apply a filter destructively unless converted first.
 
+### VectorCraft bridge status
+
+VectorCraft uses a different desktop JSON-lines control protocol from PhotoCraft. Its socket has **no authentication**, so Praxilume hard-codes this adapter to `127.0.0.1`; never expose VectorCraft's control port to another host. Start VectorCraft with `--automation-read-root` and `--automation-write-root` so upstream file access is confined, then use `vectorcraft-open` and `vectorcraft-export` for root-scoped document I/O. Export parent directories must already exist.
+
+The initial `praxilume.vector/v1` catalog provides typed rectangle, ellipse and SVG-path creation plus fill/stroke color operations. These commands act on an already-open document (except open/export), and the new shapes use the current VectorCraft drawing appearance. The adapter currently supports the five listed operations; grouping, boolean geometry, typography and multi-artboard workflow remain future work.
+
 ## Verification policy
 
 Every milestone follows:
@@ -96,7 +110,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861) with 20 unit tests. Adjustment-layer and Smart Filter controls passed [GitHub Actions run 38721808097](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721808097): formatting and workspace tests passed, with 24 unit tests plus doc-test stages.
+The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861) with 20 unit tests. Adjustment-layer and Smart Filter controls passed [GitHub Actions run 38721808097](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721808097): formatting and workspace tests passed, with 24 unit tests plus doc-test stages. Initial VectorCraft support passed [GitHub Actions run 38722780911](https://github.com/Chetan-code-lrca/Example2/actions/runs/38722780911): `cargo fmt --all -- --check` and `cargo test --workspace` succeeded, including 32 unit tests plus doc-test stages.
 
 ## Repository naming
 

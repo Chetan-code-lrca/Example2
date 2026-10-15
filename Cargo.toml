@@ -2,6 +2,7 @@
 members = [
   "crates/core",
   "crates/image-capability",
+  "crates/vector-capability",
   "crates/runtime",
   "crates/artcraft-bridge",
   "crates/cli",

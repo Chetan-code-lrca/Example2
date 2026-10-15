@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use praxilume_artcraft_bridge::ControlEndpoint;
+use praxilume_artcraft_bridge::{ControlEndpoint, VectorCraftEndpoint};
 use praxilume_core::{Actor, CommandEnvelope, Id, Operation, Project};
 use praxilume_image_capability::IMAGE_COMMAND_CATALOG;
 use praxilume_runtime::ProjectStore;
+use praxilume_vector_capability::VECTOR_COMMAND_CATALOG;
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -50,6 +51,33 @@ enum Command {
         dry_run: bool,
     },
     ImageCommands,
+    VectorCommands,
+    #[command(name = "vectorcraft")]
+    VectorCraft {
+        port: u16,
+        #[arg(long)]
+        command: String,
+        #[arg(long, default_value = "vector design bridge call")]
+        intent: String,
+        #[arg(long, default_value = "{}")]
+        params: String,
+    },
+    #[command(
+        name = "vectorcraft-open",
+        about = "Open a file beneath VectorCraft's configured automation read root"
+    )]
+    VectorCraftOpen {
+        port: u16,
+        path: String,
+    },
+    #[command(
+        name = "vectorcraft-export",
+        about = "Export beneath VectorCraft's configured automation write root"
+    )]
+    VectorCraftExport {
+        port: u16,
+        path: String,
+    },
     Artcraft {
         port: u16,
         #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
@@ -101,6 +129,23 @@ fn main() -> Result<()> {
             dry_run,
         } => run_command(path, command, actor, params, dry_run),
         Command::ImageCommands => list_image_commands(),
+        Command::VectorCommands => list_vector_commands(),
+        Command::VectorCraft {
+            port,
+            command,
+            intent,
+            params,
+        } => vectorcraft(port, command, intent, params),
+        Command::VectorCraftOpen { port, path } => {
+            let response = VectorCraftEndpoint::localhost(port).open_document(&path)?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
+        Command::VectorCraftExport { port, path } => {
+            let response = VectorCraftEndpoint::localhost(port).export_document(&path)?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
         Command::Artcraft {
             port,
             token,
@@ -124,6 +169,20 @@ fn main() -> Result<()> {
             Ok(())
         }
     }
+}
+
+fn vectorcraft(port: u16, command: String, intent: String, params: String) -> Result<()> {
+    let params: serde_json::Value =
+        serde_json::from_str(&params).context("params must be valid JSON")?;
+    let envelope = CommandEnvelope::new("vector-1", Actor::User, intent, command, params);
+    let response = VectorCraftEndpoint::localhost(port).send(&envelope)?;
+    println!("{}", serde_json::to_string_pretty(&response)?);
+    Ok(())
+}
+
+fn list_vector_commands() -> Result<()> {
+    println!("{}", serde_json::to_string_pretty(VECTOR_COMMAND_CATALOG)?);
+    Ok(())
 }
 
 fn resolve_control_token(token: Option<String>) -> Result<String> {
@@ -294,6 +353,60 @@ fn list_image_commands() -> Result<()> {
 #[cfg(test)]
 mod cli_tests {
     use super::*;
+
+    #[test]
+    fn parses_vectorcraft_command_and_vector_command_catalog_subcommand() {
+        let cli = Cli::try_parse_from([
+            "praxilume",
+            "vectorcraft",
+            "7979",
+            "--command",
+            "vector.rectangle",
+            "--params",
+            r#"{"x":1,"y":2,"width":10,"height":20}"#,
+        ])
+        .expect("valid VectorCraft command");
+        match cli.command {
+            Command::VectorCraft {
+                port,
+                command,
+                params,
+                ..
+            } => {
+                assert_eq!(port, 7979);
+                assert_eq!(command, "vector.rectangle");
+                assert!(params.contains("width"));
+            }
+            _ => panic!("expected vectorcraft subcommand"),
+        }
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "vector-commands"])
+                .expect("valid vector command catalog")
+                .command,
+            Command::VectorCommands
+        ));
+    }
+
+    #[test]
+    fn parses_root_scoped_vectorcraft_open_and_export() {
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "vectorcraft-open", "7979", "assets/logo.svg"])
+                .expect("valid open command")
+                .command,
+            Command::VectorCraftOpen { port: 7979, .. }
+        ));
+        assert!(matches!(
+            Cli::try_parse_from([
+                "praxilume",
+                "vectorcraft-export",
+                "7979",
+                "exports/logo.svg"
+            ])
+            .expect("valid export command")
+            .command,
+            Command::VectorCraftExport { port: 7979, .. }
+        ));
+    }
 
     #[test]
     fn parses_root_scoped_photocraft_open_command() {

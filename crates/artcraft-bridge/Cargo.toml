@@ -13,4 +13,5 @@ workspace = true
 anyhow.workspace = true
 praxilume-core = { path = "../core" }
 praxilume-image-capability = { path = "../image-capability" }
+praxilume-vector-capability = { path = "../vector-capability" }
 serde_json.workspace = true

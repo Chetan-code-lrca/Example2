@@ -89,3 +89,32 @@ The current `praxilume.image/v1` catalog also exposes the following verified Pho
 Typed constructors validate hue/saturation ranges, levels black/white/gamma inputs, monotonic curves input coordinates, Gaussian Blur radius and object-shaped Smart Filter parameters before dispatch. Optional layer IDs are included only when supplied.
 
 Non-destructive behavior is capability-dependent: prepare a layer for Smart Filters before adding blur, and use adjustment-layer commands for Hue/Saturation, Levels or Curves. PhotoCraft's Smart Filter format support is not identical across every file format; this adapter does not promise that every filter is preserved by every export format.
+
+
+## VectorCraft control protocol
+
+VectorCraft's desktop control channel differs from PhotoCraft's: it accepts JSON-line requests such as `engine.execute`, but has **no authentication handshake**. Praxilume's `VectorCraftEndpoint` only connects to `127.0.0.1`. Keep that port local, and start VectorCraft with dedicated `--automation-read-root` and `--automation-write-root` directories so the application enforces filesystem confinement. Local path checks are also applied to Praxilume's open/export shortcuts.
+
+The initial `praxilume.vector/v1` mappings are:
+
+| Praxilume ID | VectorCraft engine command |
+|---|---|
+| `vector.rectangle` | `shape.rectangle` |
+| `vector.ellipse` | `shape.ellipse` |
+| `vector.path.create` | `path.create` |
+| `vector.paint.fill` | `paint.setFill` |
+| `vector.paint.stroke` | `paint.setStroke` |
+
+Commands and parameters are typed and validated for finite coordinates, positive dimensions, optional radius/rotation, non-empty SVG path data, and `#RRGGBB`/ `none` colors. Paint commands affect VectorCraft's selected objects or active fill/stroke proxy, so create/select the intended object before changing its paint.
+
+Use:
+
+```bash
+vectorcraft --control 7979 --automation-read-root /work/vector --automation-write-root /work/vector/out
+praxilume vectorcraft-open 7979 assets/logo.svg
+praxilume vectorcraft 7979 --command vector.rectangle --params '{"x":20,"y":20,"width":180,"height":80}'
+praxilume vectorcraft-export 7979 out/logo.svg
+praxilume vector-commands
+```
+
+The upstream app must be running with the control channel enabled. The write-root folder and export parent directory must exist. The unauthenticated control socket must never be exposed to untrusted networks.
