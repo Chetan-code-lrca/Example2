@@ -92,7 +92,10 @@ enum Command {
     VectorCraftInspect {
         port: u16,
     },
-    #[command(name = "filmcraft", about = "Run a command through FilmCraft's localhost control socket")]
+    #[command(
+        name = "filmcraft",
+        about = "Run a command through FilmCraft's localhost control socket"
+    )]
     FilmCraft {
         port: u16,
         #[arg(long)]
@@ -100,11 +103,17 @@ enum Command {
         #[arg(long, default_value = "{}")]
         params: String,
     },
-    #[command(name = "filmcraft-commands", about = "List commands exposed by a running FilmCraft instance")]
+    #[command(
+        name = "filmcraft-commands",
+        about = "List commands exposed by a running FilmCraft instance"
+    )]
     FilmCraftCommands {
         port: u16,
     },
-    #[command(name = "filmcraft-sequence", about = "Inspect the active FilmCraft sequence as JSON")]
+    #[command(
+        name = "filmcraft-sequence",
+        about = "Inspect the active FilmCraft sequence as JSON"
+    )]
     FilmCraftSequence {
         port: u16,
     },
@@ -186,7 +195,11 @@ fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&response)?);
             Ok(())
         }
-        Command::FilmCraft { port, command, params } => filmcraft(port, command, params),
+        Command::FilmCraft {
+            port,
+            command,
+            params,
+        } => filmcraft(port, command, params),
         Command::FilmCraftCommands { port } => {
             let response = FilmCraftEndpoint::localhost(port).list_commands()?;
             println!("{}", serde_json::to_string_pretty(&response)?);
@@ -486,9 +499,17 @@ mod cli_tests {
     #[test]
     fn parses_filmcraft_bridge_commands() {
         match Cli::try_parse_from([
-            "praxilume", "filmcraft", "9876", "--command", "sequence.inspect",
-            "--params", "{}"
-        ]).expect("valid FilmCraft command").command {
+            "praxilume",
+            "filmcraft",
+            "9876",
+            "--command",
+            "sequence.inspect",
+            "--params",
+            "{}",
+        ])
+        .expect("valid FilmCraft command")
+        .command
+        {
             Command::FilmCraft { port, command, params } => {
                 assert_eq!(port, 9876);
                 assert_eq!(command, "sequence.inspect");
