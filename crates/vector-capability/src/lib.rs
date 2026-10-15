@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use praxilume_core::{Actor, COMMAND_PROTOCOL, CommandEnvelope};
+use praxilume_core::{Actor, CommandEnvelope};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -201,7 +201,7 @@ fn validate_solid_color(color: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use praxilume_core::Id;
+    use praxilume_core::{COMMAND_PROTOCOL, Id};
 
     #[test]
     fn rectangle_builds_a_versioned_command_envelope() {
