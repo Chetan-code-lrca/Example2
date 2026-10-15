@@ -510,7 +510,11 @@ mod cli_tests {
         .expect("valid FilmCraft command")
         .command
         {
-            Command::FilmCraft { port, command, params } => {
+            Command::FilmCraft {
+                port,
+                command,
+                params,
+            } => {
                 assert_eq!(port, 9876);
                 assert_eq!(command, "sequence.inspect");
                 assert_eq!(params, "{}");
