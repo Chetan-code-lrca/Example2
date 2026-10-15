@@ -461,11 +461,7 @@ mod tests {
             })
         );
         assert_eq!(
-            control_method_frame(
-                "praxilume-vector-commands",
-                "engine.commands",
-                json!({})
-            ),
+            control_method_frame("praxilume-vector-commands", "engine.commands", json!({})),
             json!({
                 "id": "praxilume-vector-commands",
                 "method": "engine.commands",
@@ -473,11 +469,7 @@ mod tests {
             })
         );
         assert_eq!(
-            control_method_frame(
-                "praxilume-vector-inspect",
-                "document.inspect",
-                json!({})
-            ),
+            control_method_frame("praxilume-vector-inspect", "document.inspect", json!({})),
             json!({
                 "id": "praxilume-vector-inspect",
                 "method": "document.inspect",
