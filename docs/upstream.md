@@ -29,3 +29,22 @@ Prefer this sequence:
 The upstream repositories expose Apache-2.0 and MIT license files plus repository notices. Any future vendored code must preserve the applicable upstream license and notice files and must be isolated under an explicit upstream or adapter boundary.
 
 Praxilume's own source is Apache-2.0. This does not relicense upstream software.
+
+
+## PhotoCraft control protocol
+
+The current bridge implementation targets PhotoCraft's loopback JSON-lines control endpoint. Each new TCP connection must:
+
+1. Send an `auth` frame containing the control token and require an `ok: true` response.
+2. Send the Praxilume command as an `engine.execute` request with `command` and `params`.
+3. Match the response ID to the request and surface upstream errors.
+
+The adapter accepts object or null command parameters, keeps the token out of command frames, and uses a 65-second read timeout for PhotoCraft's documented 60-second response window. Other ArtCraft applications need their own verified protocol adapters; shared branding is not evidence of wire compatibility.
+
+Example after launching PhotoCraft with `--control 7878` and opening a document:
+
+```bash
+praxilume artcraft 7878 --token "$PHOTOCRAFT_CONTROL_TOKEN" --command image.adjustments.invert
+```
+
+Keep the control endpoint bound to loopback and treat the token as a secret. Do not expose this port to untrusted networks.
