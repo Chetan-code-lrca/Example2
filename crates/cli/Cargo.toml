@@ -18,5 +18,6 @@ anyhow.workspace = true
 clap.workspace = true
 praxilume-artcraft-bridge = { path = "../artcraft-bridge" }
 praxilume-core = { path = "../core" }
+praxilume-image-capability = { path = "../image-capability" }
 praxilume-runtime = { path = "../runtime" }
 serde_json.workspace = true

@@ -22,12 +22,13 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 
 ## Current milestone
 
-**Milestone 0 — Foundation is implemented.**
+**Foundation is verified; Phase 2 now exposes six canonical image-edit commands.**
 
 ```text
 praxilume/
 ├── crates/
 │   ├── core/             # shared project model + commands + policy
+│   ├── image-capability/ # typed image operations + canonical command catalog
 │   ├── runtime/          # project persistence + content-addressed assets
 │   ├── artcraft-bridge/  # controlled JSON-lines upstream adapter
 │   └── cli/              # functional command line interface
@@ -44,9 +45,11 @@ praxilume inspect demo.prax
 praxilume rename demo.prax --name "Poster Lab"
 praxilume import demo.prax ./image.png --extension png
 praxilume command demo.prax --command project.rename --params '{"name":"Poster Lab"}'
+praxilume image-commands  # list canonical image command IDs and upstream mappings
 # PhotoCraft must be running with control enabled, and a document should be open.
 export PHOTOCRAFT_CONTROL_TOKEN="$(cat /private/path/photocraft-control.token)"
-praxilume artcraft 7878 --command image.adjustments.invert
+praxilume artcraft 7878 --command image.invert
+praxilume artcraft 7878 --command image.crop --params '{"x":0,"y":0,"width":800,"height":600}'
 ```
 
 ## Architecture
@@ -71,7 +74,7 @@ The core deliberately stays independent of renderers and codecs. Those belong be
 
 ### PhotoCraft bridge status
 
-The first upstream adapter now follows PhotoCraft's authenticated loopback protocol: it sends the auth frame first, then invokes `engine.execute` with a validated command ID and object-or-null parameters. It checks both authentication and command replies, surfaces upstream errors, and allows up to 65 seconds for responses to cover PhotoCraft's documented 60-second command window. This is the PhotoCraft-specific adapter path, not a claim that all seven ArtCraft apps share a wire protocol. The CLI also accepts `PHOTOCRAFT_CONTROL_TOKEN` from the environment when `--token` is omitted; prefer this to avoid putting the secret in the process argument list.
+The first upstream adapter follows PhotoCraft's authenticated loopback protocol: authenticate first, then invoke `engine.execute`. It validates parameters and response IDs, surfaces upstream errors, and allows up to 65 seconds for PhotoCraft's documented 60-second response window. The CLI accepts `PHOTOCRAFT_CONTROL_TOKEN` when `--token` is omitted; prefer the environment variable to avoid exposing the secret in process arguments. The `praxilume.image/v1` catalog maps six canonical commands—`image.invert`, `image.crop`, `image.resize`, `image.brightness_contrast`, `image.layer.create`, and `image.layer.move`—to verified PhotoCraft engine commands. These edits target an already-open document; path-scoped open/export workflows remain pending.
 
 ## Verification policy
 
@@ -89,7 +92,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The first foundation CI pass is green: Rustfmt completed successfully and the workspace tests passed (6 tests total across the core and runtime crates, plus successful compile/doc-test stages).
+The foundation milestone previously passed Rustfmt and all workspace tests. The image-command-pack branch is awaiting its own CI run before promotion.
 
 ## Repository naming
 

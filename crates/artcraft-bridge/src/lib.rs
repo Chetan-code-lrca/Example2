@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
 use praxilume_core::CommandEnvelope;
+use praxilume_image_capability::upstream_command_id;
 use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -92,11 +93,13 @@ fn authentication_frame(token: &str) -> Value {
 }
 
 fn command_frame(envelope: &CommandEnvelope) -> Value {
+    let command = upstream_command_id(envelope.command.as_str())
+        .unwrap_or(envelope.command.as_str());
     json!({
         "id": envelope.command_id.as_str(),
         "method": "engine.execute",
         "params": {
-            "command": envelope.command,
+            "command": command,
             "params": envelope.params,
         },
     })
@@ -185,6 +188,15 @@ mod tests {
         );
         assert!(frame.get("control_token").is_none());
         assert!(frame.get("protocol").is_none());
+    }
+
+    #[test]
+    fn command_frame_translates_canonical_image_commands() {
+        let mut envelope = test_envelope(json!({}));
+        envelope.command = "image.invert".to_owned();
+        let frame = command_frame(&envelope);
+        assert_eq!(frame["params"]["command"], "image.adjustments.invert");
+        assert_eq!(frame["params"]["params"], json!({}));
     }
 
     #[test]

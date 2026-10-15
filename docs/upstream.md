@@ -45,7 +45,25 @@ Example after launching PhotoCraft with `--control 7878` and opening a document:
 
 ```bash
 export PHOTOCRAFT_CONTROL_TOKEN="$(cat /private/path/photocraft-control.token)"
-praxilume artcraft 7878 --command image.adjustments.invert
+praxilume image-commands
+praxilume artcraft 7878 --command image.invert
+praxilume artcraft 7878 --command image.crop --params '{"x":0,"y":0,"width":800,"height":600}'
 ```
 
 Prefer the `PHOTOCRAFT_CONTROL_TOKEN` environment variable over `--token` so the credential is not included in the Praxilume process argument list. Keep the control endpoint bound to loopback and treat the token as a secret. Do not expose this port to untrusted networks.
+
+
+## Initial image command pack
+
+The current catalog is versioned as `praxilume.image/v1`. It exposes canonical IDs, typed request constructors, and a JSON catalog through `praxilume image-commands`.
+
+| Praxilume ID | PhotoCraft engine command |
+|---|---|
+| `image.invert` | `image.adjustments.invert` |
+| `image.crop` | `image.crop` |
+| `image.resize` | `image.imageSize` |
+| `image.brightness_contrast` | `image.adjustments.brightnessContrast` |
+| `image.layer.create` | `layer.new.layer` |
+| `image.layer.move` | `layer.moveTo` |
+
+The typed API rejects non-positive crop/resize dimensions and self-target layer moves before dispatch. The bridge keeps backwards-compatible pass-through for native PhotoCraft command IDs. This first catalog only edits an already-open document; open/import and export remain outside the pack until Praxilume exposes read-root/write-root scoped calls for PhotoCraft's `doc.open` and `doc.save` methods.

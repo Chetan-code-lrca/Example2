@@ -12,14 +12,11 @@
 
 Build an image capability adapter around an upstream raster engine rather than a second raster implementation.
 
-The first adapter should expose:
-
-- image import/open
-- crop and resize
-- color adjustments
-- layer creation and ordering
-- non-destructive filter stacks
-- export
+- [x] Canonical command catalog and typed constructors for invert, crop, resize, brightness/contrast, layer creation and layer movement
+- [x] PhotoCraft command-ID mapping through the authenticated control bridge
+- [ ] Read-root-scoped image import/open using PhotoCraft's `doc.open` method
+- [ ] Broader color adjustments and non-destructive filter stacks
+- [ ] Write-root-scoped export using PhotoCraft's `doc.save` or render/export methods
 
 Every operation must be represented as a Praxilume command and remain inspectable by an agent.
 
