@@ -28,7 +28,8 @@ Every operation must be represented as a Praxilume command and remain inspectabl
 - [x] Read-only active-document inspection through `document.inspect`
 - [ ] Rich vector operations: groups, boolean geometry, typography, and multi-artboard workflows
 - [x] Initial FilmCraft bridge: loopback command execution, live command discovery and sequence inspection
-- [ ] Typed timeline operations and Praxilume timeline object model
+- [x] Typed timeline operations for add-edit, all-track add-edit, razor and clip moves
+- [x] Normalized timeline snapshot model for sequence tracks, clips, source ranges, markers and selection
 - Photo/RAW capability pack
 - PDF/publishing capability pack
 - Motion/VFX capability pack

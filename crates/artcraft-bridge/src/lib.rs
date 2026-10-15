@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
-use praxilume_core::CommandEnvelope;
+use praxilume_core::{COMMAND_PROTOCOL, CommandEnvelope};
 use praxilume_image_capability::upstream_command_id as upstream_image_command_id;
+use praxilume_timeline_capability::TimelineOperation;
 use praxilume_vector_capability::upstream_command_id as upstream_vector_command_id;
 use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Write};
@@ -270,6 +271,31 @@ impl FilmCraftEndpoint {
         )
     }
 
+    /// Execute a validated canonical Praxilume timeline envelope through FilmCraft.
+    /// Dry-runs validate and show the upstream mapping without opening a socket.
+    pub fn execute_timeline(&self, envelope: &CommandEnvelope) -> Result<Value> {
+        if envelope.protocol != COMMAND_PROTOCOL {
+            bail!(
+                "unsupported command envelope protocol '{}'",
+                envelope.protocol
+            );
+        }
+        let operation =
+            TimelineOperation::from_command(envelope.command.as_str(), envelope.params.clone())?;
+        if envelope.dry_run {
+            return Ok(json!({
+                "dry_run": true,
+                "protocol": envelope.protocol,
+                "command_id": envelope.command_id.as_str(),
+                "command": envelope.command,
+                "params": envelope.params,
+                "upstream_command": operation.upstream_command(),
+                "upstream_params": operation.upstream_params(),
+            }));
+        }
+        self.execute(operation.upstream_command(), operation.upstream_params())
+    }
+
     /// Read the current engine command registry, including command IDs and parameters.
     pub fn list_commands(&self) -> Result<Value> {
         self.send_method(
@@ -458,6 +484,24 @@ mod tests {
             "image.adjustments.invert",
             params,
         )
+    }
+
+    #[test]
+    fn filmcraft_timeline_dry_run_maps_without_connecting() {
+        let operation =
+            TimelineOperation::from_command("timeline.add_edit", json!({"time_ticks": 42}))
+                .expect("valid typed timeline operation");
+        let mut envelope = operation.into_envelope(
+            "timeline-test-1",
+            Actor::User,
+            "split at an explicit timeline time",
+        );
+        envelope.dry_run = true;
+        let response = FilmCraftEndpoint::localhost(0)
+            .execute_timeline(&envelope)
+            .expect("dry-run must not need a control socket");
+        assert_eq!(response["upstream_command"], "sequence.addEdit");
+        assert_eq!(response["upstream_params"], json!({"time": 42}));
     }
 
     #[test]

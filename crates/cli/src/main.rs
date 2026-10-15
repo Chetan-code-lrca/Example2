@@ -4,6 +4,9 @@ use praxilume_artcraft_bridge::{ControlEndpoint, FilmCraftEndpoint, VectorCraftE
 use praxilume_core::{Actor, CommandEnvelope, Id, Operation, Project};
 use praxilume_image_capability::IMAGE_COMMAND_CATALOG;
 use praxilume_runtime::ProjectStore;
+use praxilume_timeline_capability::{
+    TIMELINE_COMMAND_CATALOG, TimelineOperation, TimelineSnapshot,
+};
 use praxilume_vector_capability::VECTOR_COMMAND_CATALOG;
 use std::path::PathBuf;
 
@@ -52,6 +55,11 @@ enum Command {
     },
     ImageCommands,
     VectorCommands,
+    #[command(
+        name = "timeline-commands",
+        about = "List the canonical typed FilmCraft timeline command subset"
+    )]
+    TimelineCommands,
     #[command(name = "vectorcraft")]
     VectorCraft {
         port: u16,
@@ -117,6 +125,29 @@ enum Command {
     FilmCraftSequence {
         port: u16,
     },
+    #[command(
+        name = "filmcraft-timeline",
+        about = "Run a validated typed timeline operation through FilmCraft"
+    )]
+    FilmCraftTimeline {
+        port: u16,
+        #[arg(long)]
+        command: String,
+        #[arg(long, default_value = "{}")]
+        params: String,
+        #[arg(
+            long,
+            help = "Validate and print the upstream mapping without executing it"
+        )]
+        dry_run: bool,
+    },
+    #[command(
+        name = "filmcraft-timeline-inspect",
+        about = "Inspect the active FilmCraft sequence as a normalized typed snapshot"
+    )]
+    FilmCraftTimelineInspect {
+        port: u16,
+    },
     Artcraft {
         port: u16,
         #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
@@ -169,6 +200,7 @@ fn main() -> Result<()> {
         } => run_command(path, command, actor, params, dry_run),
         Command::ImageCommands => list_image_commands(),
         Command::VectorCommands => list_vector_commands(),
+        Command::TimelineCommands => list_timeline_commands(),
         Command::VectorCraft {
             port,
             command,
@@ -210,6 +242,13 @@ fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&response)?);
             Ok(())
         }
+        Command::FilmCraftTimeline {
+            port,
+            command,
+            params,
+            dry_run,
+        } => filmcraft_timeline(port, command, params, dry_run),
+        Command::FilmCraftTimelineInspect { port } => filmcraft_timeline_inspect(port),
         Command::Artcraft {
             port,
             token,
@@ -254,6 +293,36 @@ fn filmcraft(port: u16, command: String, params: String) -> Result<()> {
         serde_json::from_str(&params).context("params must be valid JSON")?;
     let response = FilmCraftEndpoint::localhost(port).execute(&command, params)?;
     println!("{}", serde_json::to_string_pretty(&response)?);
+    Ok(())
+}
+
+fn filmcraft_timeline(port: u16, command: String, params: String, dry_run: bool) -> Result<()> {
+    let params: serde_json::Value =
+        serde_json::from_str(&params).context("params must be valid JSON")?;
+    let operation = TimelineOperation::from_command(&command, params)?;
+    let mut envelope = operation.into_envelope(
+        "filmcraft-timeline-1",
+        Actor::User,
+        "validated typed FilmCraft timeline operation",
+    );
+    envelope.dry_run = dry_run;
+    let response = FilmCraftEndpoint::localhost(port).execute_timeline(&envelope)?;
+    println!("{}", serde_json::to_string_pretty(&response)?);
+    Ok(())
+}
+
+fn filmcraft_timeline_inspect(port: u16) -> Result<()> {
+    let response = FilmCraftEndpoint::localhost(port).inspect_sequence()?;
+    let snapshot = TimelineSnapshot::from_control_response(&response)?;
+    println!("{}", serde_json::to_string_pretty(&snapshot)?);
+    Ok(())
+}
+
+fn list_timeline_commands() -> Result<()> {
+    println!(
+        "{}",
+        serde_json::to_string_pretty(TIMELINE_COMMAND_CATALOG)?
+    );
     Ok(())
 }
 
@@ -493,6 +562,48 @@ mod cli_tests {
                 .expect("valid document inspection CLI")
                 .command,
             Command::VectorCraftInspect { port: 7979 }
+        ));
+    }
+
+    #[test]
+    fn parses_typed_filmcraft_timeline_commands_and_dry_run_flag() {
+        match Cli::try_parse_from([
+            "praxilume",
+            "filmcraft-timeline",
+            "9876",
+            "--command",
+            "timeline.add_edit",
+            "--params",
+            r#"{"time_ticks":42}"#,
+            "--dry-run",
+        ])
+        .expect("valid typed FilmCraft timeline operation")
+        .command
+        {
+            Command::FilmCraftTimeline {
+                port,
+                command,
+                params,
+                dry_run,
+            } => {
+                assert_eq!(port, 9876);
+                assert_eq!(command, "timeline.add_edit");
+                assert_eq!(params, r#"{"time_ticks":42}"#);
+                assert!(dry_run);
+            }
+            _ => panic!("expected typed FilmCraft timeline command"),
+        }
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "timeline-commands"])
+                .expect("valid timeline command catalog")
+                .command,
+            Command::TimelineCommands
+        ));
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "filmcraft-timeline-inspect", "9876"])
+                .expect("valid typed timeline inspection")
+                .command,
+            Command::FilmCraftTimelineInspect { port: 9876 }
         ));
     }
 

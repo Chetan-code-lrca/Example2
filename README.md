@@ -22,13 +22,15 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 
 ## Current milestone
 
-**Phase 2 image editing is verified; Phase 3 now includes live VectorCraft command discovery and read-only document inspection.**
+**Phase 2 image editing is verified; Phase 3 now includes live VectorCraft introspection and typed FilmCraft timeline operations with normalized sequence snapshots.**
 
 ```text
 praxilume/
 ├── crates/
 │   ├── core/             # shared project model + commands + policy
 │   ├── image-capability/ # typed image operations + canonical command catalog
+│   ├── vector-capability/ # typed vector operations + canonical command catalog
+│   ├── timeline-capability/ # typed timeline operations + normalized sequence model
 │   ├── runtime/          # project persistence + content-addressed assets
 │   ├── artcraft-bridge/  # controlled JSON-lines upstream adapter
 │   └── cli/              # functional command line interface
@@ -68,7 +70,11 @@ praxilume vector-commands            # list Praxilume's stable canonical vector 
 # Start FilmCraft with its localhost-only control socket enabled.
 filmcraft --control 9876
 praxilume filmcraft-commands 9876     # discover live command IDs and parameter schemas
-praxilume filmcraft-sequence 9876     # read the active timeline/sequence
+praxilume filmcraft-sequence 9876     # inspect the raw active timeline/sequence JSON
+praxilume timeline-commands            # list the typed Praxilume timeline subset
+praxilume filmcraft-timeline-inspect 9876 # normalized, typed sequence snapshot
+praxilume filmcraft-timeline 9876 --command timeline.add_edit --params '{"time_ticks":254016000000}' --dry-run
+# Remove --dry-run only after checking the operation and active sequence.
 praxilume filmcraft 9876 --command sequence.inspect --params '{}'
 ```
 
@@ -108,6 +114,8 @@ The CLI can now query `engine.commands` on the running VectorCraft instance with
 
 Praxilume now has an initial FilmCraft adapter for its JSON-lines control protocol. It pins connections to `127.0.0.1`, checks the echoed request ID and the upstream `ok`/error response, and exposes live command discovery plus read-only active-sequence inspection. The generic `filmcraft` command forwards an upstream engine command through `engine.execute`; consult `filmcraft-commands` to inspect command IDs and parameters before executing edits.
 
+The `praxilume.timeline/v1` capability adds typed mappings for add-edit, all-track add-edit, razor and clip-move operations. Canonical Praxilume parameters use integer `time_ticks`; the adapter translates these to FilmCraft's documented `time` tick field and command IDs. Unknown parameters, negative times, invalid clip/track IDs, empty move lists and duplicate clip moves are rejected before a request is sent. Use `filmcraft-timeline-inspect` for a normalized snapshot with integer tick positions, clip/source ranges, track flags, markers and selection; `filmcraft-sequence` remains available for the complete upstream response. The typed mutation command supports `--dry-run`, which validates parameters and prints the upstream mapping without opening a socket.
+
 **Security:** FilmCraft's control socket has no authentication. Enable it only while actively using the integration, keep it bound to loopback, and never expose the port through LAN, a reverse proxy, or the public internet. Praxilume hard-codes the destination to loopback but cannot secure a separately exposed upstream service.
 
 ## Verification policy
@@ -126,7 +134,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861) with 20 unit tests. Adjustment-layer and Smart Filter controls passed [GitHub Actions run 38721808097](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721808097): formatting and workspace tests passed, with 24 unit tests plus doc-test stages. Initial VectorCraft support passed [GitHub Actions run 38722780911](https://github.com/Chetan-code-lrca/Example2/actions/runs/38722780911): `cargo fmt --all -- --check` and `cargo test --workspace` succeeded, including 32 unit tests plus doc-test stages. Live VectorCraft command discovery and read-only document inspection passed [GitHub Actions run 38724542671](https://github.com/Chetan-code-lrca/Example2/actions/runs/38724542671): formatting and workspace tests passed, with 33 unit tests plus doc-test stages. FilmCraft loopback command execution, live command discovery and sequence inspection passed [GitHub Actions run 38725127742](https://github.com/Chetan-code-lrca/Example2/actions/runs/38725127742): formatting and workspace tests passed, with 36 unit tests plus doc-test stages.
+The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861) with 20 unit tests. Adjustment-layer and Smart Filter controls passed [GitHub Actions run 38721808097](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721808097): formatting and workspace tests passed, with 24 unit tests plus doc-test stages. Initial VectorCraft support passed [GitHub Actions run 38722780911](https://github.com/Chetan-code-lrca/Example2/actions/runs/38722780911): `cargo fmt --all -- --check` and `cargo test --workspace` succeeded, including 32 unit tests plus doc-test stages. Live VectorCraft command discovery and read-only document inspection passed [GitHub Actions run 38724542671](https://github.com/Chetan-code-lrca/Example2/actions/runs/38724542671): formatting and workspace tests passed, with 33 unit tests plus doc-test stages. FilmCraft loopback command execution, live command discovery and sequence inspection passed [GitHub Actions run 38725127742](https://github.com/Chetan-code-lrca/Example2/actions/runs/38725127742): formatting and workspace tests passed, with 36 unit tests plus doc-test stages. Typed FilmCraft timeline commands, normalized sequence snapshots and dry-run mapping passed [GitHub Actions run 38728091942](https://github.com/Chetan-code-lrca/Example2/actions/runs/38728091942): formatting and workspace tests passed, with 45 unit tests plus doc-test stages.
 
 ## Repository naming
 
