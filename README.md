@@ -96,7 +96,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726): `cargo fmt --all -- --check` and `cargo test --workspace` both passed, including 16 unit tests plus doc-test stages. The scoped file-I/O addition is awaiting its own CI run before promotion.
+The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export also passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861): `cargo fmt --all -- --check` and `cargo test --workspace` passed, including 20 unit tests plus doc-test stages.
 
 ## Repository naming
 
