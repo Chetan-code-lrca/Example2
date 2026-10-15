@@ -50,8 +50,8 @@ enum Command {
     },
     Artcraft {
         port: u16,
-        #[arg(long)]
-        token: String,
+        #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
+        token: Option<String>,
         #[arg(long)]
         command: String,
         #[arg(long, default_value = "creative bridge call")]
@@ -84,7 +84,12 @@ fn main() -> Result<()> {
             command,
             intent,
             params,
-        } => bridge(port, &token, command, intent, params),
+        } => {
+            let token = token
+                .or_else(|| std::env::var("PHOTOCRAFT_CONTROL_TOKEN").ok())
+                .context("provide --token or set PHOTOCRAFT_CONTROL_TOKEN")?;
+            bridge(port, &token, command, intent, params)
+        },
     }
 }
 
