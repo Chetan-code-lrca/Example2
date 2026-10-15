@@ -22,7 +22,7 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 
 ## Current milestone
 
-**Phase 2 image editing is verified; Phase 3 now has an initial typed VectorCraft capability and loopback adapter.**
+**Phase 2 image editing is verified; Phase 3 now includes live VectorCraft command discovery and read-only document inspection.**
 
 ```text
 praxilume/
@@ -61,7 +61,9 @@ praxilume vectorcraft-open 7979 assets/logo.svg
 praxilume vectorcraft 7979 --command vector.rectangle --params '{"x":20,"y":20,"width":180,"height":80,"radius":8}'
 praxilume vectorcraft 7979 --command vector.paint.fill --params '{"color":"#cc66aa"}'
 praxilume vectorcraft-export 7979 out/logo.svg
-praxilume vector-commands
+praxilume vectorcraft-commands 7979 # inspect commands exposed by this VectorCraft build
+praxilume vectorcraft-inspect 7979  # read the active document tree as JSON
+praxilume vector-commands            # list Praxilume's stable canonical vector subset
 ```
 
 ## Architecture
@@ -93,6 +95,8 @@ The first upstream adapter follows PhotoCraft's authenticated loopback protocol:
 VectorCraft uses a different desktop JSON-lines control protocol from PhotoCraft. Its socket has **no authentication**, so Praxilume hard-codes this adapter to `127.0.0.1`; never expose VectorCraft's control port to another host. Start VectorCraft with `--automation-read-root` and `--automation-write-root` so upstream file access is confined, then use `vectorcraft-open` and `vectorcraft-export` for root-scoped document I/O. Export parent directories must already exist.
 
 The initial `praxilume.vector/v1` catalog provides typed rectangle, ellipse and SVG-path creation plus fill/stroke color operations. These commands act on an already-open document (except open/export), and the new shapes use the current VectorCraft drawing appearance. The adapter currently supports the five listed operations; grouping, boolean geometry, typography and multi-artboard workflow remain future work.
+
+The CLI can now query `engine.commands` on the running VectorCraft instance with `vectorcraft-commands`, so you can inspect upstream functionality before we add a canonical adapter mapping. Use `vectorcraft-inspect` to call VectorCraft's read-only `document.inspect` method and retrieve the active layer/object tree, selection, key object, history and paint defaults as JSON. This gives a future agent a grounded view of the real document instead of asking it to infer hidden objects. Both calls use the adapter's loopback-only socket and preserve upstream response/error validation; inspection requires an open document.
 
 ## Verification policy
 

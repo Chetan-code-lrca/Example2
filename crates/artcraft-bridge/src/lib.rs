@@ -183,6 +183,26 @@ impl VectorCraftEndpoint {
         )
     }
 
+    /// Query the live command catalog advertised by the running VectorCraft engine.
+    pub fn list_commands(&self) -> Result<Value> {
+        self.send_method(
+            "praxilume-vector-commands",
+            "engine.commands",
+            json!({}),
+            "engine.commands",
+        )
+    }
+
+    /// Read the active document's structured layer/object tree without changing it.
+    pub fn inspect_document(&self) -> Result<Value> {
+        self.send_method(
+            "praxilume-vector-inspect",
+            "document.inspect",
+            json!({}),
+            "document.inspect",
+        )
+    }
+
     fn send_method(
         &self,
         request_id: &str,
@@ -438,6 +458,30 @@ mod tests {
                 "id": "praxilume-open",
                 "method": "app.open",
                 "params": {"path": "assets/input.png"}
+            })
+        );
+        assert_eq!(
+            control_method_frame(
+                "praxilume-vector-commands",
+                "engine.commands",
+                json!({})
+            ),
+            json!({
+                "id": "praxilume-vector-commands",
+                "method": "engine.commands",
+                "params": {}
+            })
+        );
+        assert_eq!(
+            control_method_frame(
+                "praxilume-vector-inspect",
+                "document.inspect",
+                json!({})
+            ),
+            json!({
+                "id": "praxilume-vector-inspect",
+                "method": "document.inspect",
+                "params": {}
             })
         );
     }

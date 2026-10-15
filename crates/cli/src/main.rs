@@ -78,6 +78,20 @@ enum Command {
         port: u16,
         path: String,
     },
+    #[command(
+        name = "vectorcraft-commands",
+        about = "List commands exposed by a running VectorCraft instance"
+    )]
+    VectorCraftCommands {
+        port: u16,
+    },
+    #[command(
+        name = "vectorcraft-inspect",
+        about = "Inspect the active VectorCraft document as structured JSON"
+    )]
+    VectorCraftInspect {
+        port: u16,
+    },
     Artcraft {
         port: u16,
         #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
@@ -143,6 +157,16 @@ fn main() -> Result<()> {
         }
         Command::VectorCraftExport { port, path } => {
             let response = VectorCraftEndpoint::localhost(port).export_document(&path)?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
+        Command::VectorCraftCommands { port } => {
+            let response = VectorCraftEndpoint::localhost(port).list_commands()?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
+        Command::VectorCraftInspect { port } => {
+            let response = VectorCraftEndpoint::localhost(port).inspect_document()?;
             println!("{}", serde_json::to_string_pretty(&response)?);
             Ok(())
         }
@@ -405,6 +429,22 @@ mod cli_tests {
             .expect("valid export command")
             .command,
             Command::VectorCraftExport { port: 7979, .. }
+        ));
+    }
+
+    #[test]
+    fn parses_vectorcraft_live_discovery_commands() {
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "vectorcraft-commands", "7979"])
+                .expect("valid command discovery CLI")
+                .command,
+            Command::VectorCraftCommands { port: 7979 }
+        ));
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "vectorcraft-inspect", "7979"])
+                .expect("valid document inspection CLI")
+                .command,
+            Command::VectorCraftInspect { port: 7979 }
         ));
     }
 
