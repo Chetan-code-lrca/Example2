@@ -55,7 +55,7 @@ Prefer the `PHOTOCRAFT_CONTROL_TOKEN` environment variable over `--token` so the
 
 ## Initial image command pack
 
-The current catalog is versioned as `praxilume.image/v1`. It exposes canonical IDs, typed request constructors, and a JSON catalog through `praxilume image-commands`.
+The current 16-command catalog is versioned as `praxilume.image/v1`. It exposes canonical IDs, typed request constructors, and a JSON catalog through `praxilume image-commands`.
 
 | Praxilume ID | PhotoCraft engine command |
 |---|---|

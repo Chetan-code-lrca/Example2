@@ -96,7 +96,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861) with 20 unit tests. The new adjustment-layer and Smart Filter commands are awaiting CI verification.
+The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861) with 20 unit tests. Adjustment-layer and Smart Filter controls passed [GitHub Actions run 38721808097](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721808097): formatting and workspace tests passed, with 24 unit tests plus doc-test stages.
 
 ## Repository naming
 
