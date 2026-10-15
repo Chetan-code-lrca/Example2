@@ -55,7 +55,7 @@ Prefer the `PHOTOCRAFT_CONTROL_TOKEN` environment variable over `--token` so the
 
 ## Initial image command pack
 
-The current catalog is versioned as `praxilume.image/v1`. It exposes canonical IDs, typed request constructors, and a JSON catalog through `praxilume image-commands`.
+The current 16-command catalog is versioned as `praxilume.image/v1`. It exposes canonical IDs, typed request constructors, and a JSON catalog through `praxilume image-commands`.
 
 | Praxilume ID | PhotoCraft engine command |
 |---|---|
@@ -67,3 +67,25 @@ The current catalog is versioned as `praxilume.image/v1`. It exposes canonical I
 | `image.layer.move` | `layer.moveTo` |
 
 The typed API rejects non-positive crop/resize dimensions and self-target layer moves before dispatch. The bridge keeps backwards-compatible pass-through for native PhotoCraft command IDs. The six editing commands target an already-open document. The CLI now also exposes `praxilume photocraft-open <port> <relative-path>` and `praxilume photocraft-save <port> <relative-path>`, using PhotoCraft desktop control methods `app.open` and `app.save`. Both validate that the path is relative and normalized before dispatch. PhotoCraft then resolves the path beneath the configured `--automation-read-root` or `--automation-write-root`; start the app with distinct roots where practical. Output parent directories must already exist.
+
+
+## Adjustment layers and Smart Filters
+
+The current `praxilume.image/v1` catalog also exposes the following verified PhotoCraft mappings:
+
+| Praxilume ID | PhotoCraft engine command | Notes |
+|---|---|---|
+| `image.adjustment_layer.hue_saturation` | `layer.newAdjustmentLayer.hueSaturation` | Non-destructive adjustment layer |
+| `image.adjustment_layer.levels` | `layer.newAdjustmentLayer.levels` | Non-destructive adjustment layer |
+| `image.adjustment_layer.curves` | `layer.newAdjustmentLayer.curves` | Non-destructive adjustment layer |
+| `image.smart_filter.prepare` | `filter.convertForSmartFilters` | Convert the active/selected content first |
+| `image.smart_filter.gaussian_blur` | `filter.blur.gaussianBlur` | Adds to the Smart Filter stack when prepared |
+| `image.smart_filter.set_params` | `layer.smartFilter.setParams` | Merge a parameter object into the indexed filter |
+| `image.smart_filter.set_visible` | `layer.smartFilter.setVisible` | Show/hide one stack entry |
+| `image.smart_filter.move` | `layer.smartFilter.move` | Reorder one stack entry |
+| `image.smart_filter.delete` | `layer.smartFilter.delete` | Remove one stack entry |
+| `image.smart_filter.toggle` | `layer.smartFilter.disableSmartFilters` | `enabled: true/false` |
+
+Typed constructors validate hue/saturation ranges, levels black/white/gamma inputs, monotonic curves input coordinates, Gaussian Blur radius and object-shaped Smart Filter parameters before dispatch. Optional layer IDs are included only when supplied.
+
+Non-destructive behavior is capability-dependent: prepare a layer for Smart Filters before adding blur, and use adjustment-layer commands for Hue/Saturation, Levels or Curves. PhotoCraft's Smart Filter format support is not identical across every file format; this adapter does not promise that every filter is preserved by every export format.
