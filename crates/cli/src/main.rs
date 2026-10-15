@@ -52,6 +52,7 @@ enum Command {
     },
     ImageCommands,
     VectorCommands,
+    #[command(name = "vectorcraft")]
     VectorCraft {
         port: u16,
         #[arg(long)]
