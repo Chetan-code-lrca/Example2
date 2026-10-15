@@ -197,12 +197,7 @@ impl VectorCraftEndpoint {
         )
     }
 
-    fn send_request(
-        &self,
-        request_id: &str,
-        request: &Value,
-        phase: &str,
-    ) -> Result<Value> {
+    fn send_request(&self, request_id: &str, request: &Value, phase: &str) -> Result<Value> {
         let address = format!("127.0.0.1:{}", self.port)
             .to_socket_addrs()?
             .next()

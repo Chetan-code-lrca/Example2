@@ -3,8 +3,8 @@ use clap::{Parser, Subcommand};
 use praxilume_artcraft_bridge::{ControlEndpoint, VectorCraftEndpoint};
 use praxilume_core::{Actor, CommandEnvelope, Id, Operation, Project};
 use praxilume_image_capability::IMAGE_COMMAND_CATALOG;
-use praxilume_vector_capability::VECTOR_COMMAND_CATALOG;
 use praxilume_runtime::ProjectStore;
+use praxilume_vector_capability::VECTOR_COMMAND_CATALOG;
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -129,9 +129,12 @@ fn main() -> Result<()> {
         } => run_command(path, command, actor, params, dry_run),
         Command::ImageCommands => list_image_commands(),
         Command::VectorCommands => list_vector_commands(),
-        Command::VectorCraft { port, command, intent, params } => {
-            vectorcraft(port, command, intent, params)
-        }
+        Command::VectorCraft {
+            port,
+            command,
+            intent,
+            params,
+        } => vectorcraft(port, command, intent, params),
         Command::VectorCraftOpen { port, path } => {
             let response = VectorCraftEndpoint::localhost(port).open_document(&path)?;
             println!("{}", serde_json::to_string_pretty(&response)?);
@@ -363,7 +366,12 @@ mod cli_tests {
         ])
         .expect("valid VectorCraft command");
         match cli.command {
-            Command::VectorCraft { port, command, params, .. } => {
+            Command::VectorCraft {
+                port,
+                command,
+                params,
+                ..
+            } => {
                 assert_eq!(port, 7979);
                 assert_eq!(command, "vector.rectangle");
                 assert!(params.contains("width"));
@@ -387,9 +395,14 @@ mod cli_tests {
             Command::VectorCraftOpen { port: 7979, .. }
         ));
         assert!(matches!(
-            Cli::try_parse_from(["praxilume", "vectorcraft-export", "7979", "exports/logo.svg"])
-                .expect("valid export command")
-                .command,
+            Cli::try_parse_from([
+                "praxilume",
+                "vectorcraft-export",
+                "7979",
+                "exports/logo.svg"
+            ])
+            .expect("valid export command")
+            .command,
             Command::VectorCraftExport { port: 7979, .. }
         ));
     }
