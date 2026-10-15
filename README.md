@@ -22,7 +22,7 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 
 ## Current milestone
 
-**Foundation is verified; Phase 2 now exposes six canonical image-edit commands.**
+**Foundation is verified; Phase 2 now includes typed image edits, adjustment layers, and Smart Filter stack controls.**
 
 ```text
 praxilume/
@@ -78,7 +78,7 @@ The core deliberately stays independent of renderers and codecs. Those belong be
 
 ### PhotoCraft bridge status
 
-The first upstream adapter follows PhotoCraft's authenticated loopback protocol: authenticate first, then invoke `engine.execute`. It validates parameters and response IDs, surfaces upstream errors, and allows up to 65 seconds for PhotoCraft's documented 60-second response window. The CLI accepts `PHOTOCRAFT_CONTROL_TOKEN` when `--token` is omitted; prefer the environment variable to avoid exposing the secret in process arguments. The `praxilume.image/v1` catalog maps six canonical commands—`image.invert`, `image.crop`, `image.resize`, `image.brightness_contrast`, `image.layer.create`, and `image.layer.move`—to verified PhotoCraft engine commands. The `photocraft-open` and `photocraft-save` commands use PhotoCraft's `app.open`/`app.save` methods. They reject absolute paths, parent traversal, backslashes and drive-qualified paths; PhotoCraft separately confines paths beneath its configured read/write roots. Export directories must already exist.
+The first upstream adapter follows PhotoCraft's authenticated loopback protocol: authenticate first, then invoke `engine.execute`. It validates parameters and response IDs, surfaces upstream errors, and allows up to 65 seconds for PhotoCraft's documented 60-second response window. The CLI accepts `PHOTOCRAFT_CONTROL_TOKEN` when `--token` is omitted; prefer the environment variable to avoid exposing the secret in process arguments. The `praxilume.image/v1` catalog maps canonical commands for image edits, Hue/Saturation, Levels and Curves adjustment layers, and Smart Filter preparation, blur, parameter editing, visibility, ordering, deletion and enable/disable to verified PhotoCraft engine commands. The `photocraft-open` and `photocraft-save` commands use PhotoCraft's `app.open`/`app.save` methods. They reject absolute paths, parent traversal, backslashes and drive-qualified paths; PhotoCraft separately confines paths beneath its configured read/write roots. Export directories must already exist. To use non-destructive effects, create an adjustment layer or prepare the target layer for Smart Filters before adding a filter. For example: `praxilume artcraft 7878 --command image.smart_filter.prepare`, followed by `praxilume artcraft 7878 --command image.smart_filter.gaussian_blur --params '{"radius":3}'`. A regular raster layer may apply a filter destructively unless converted first.
 
 ## Verification policy
 
@@ -96,7 +96,7 @@ GitHub Actions: cargo fmt + cargo test
 promote verified commit to main
 ```
 
-The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export also passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861): `cargo fmt --all -- --check` and `cargo test --workspace` passed, including 20 unit tests plus doc-test stages.
+The image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726) with 16 unit tests. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861) with 20 unit tests. The new adjustment-layer and Smart Filter commands are awaiting CI verification.
 
 ## Repository naming
 

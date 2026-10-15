@@ -58,6 +58,77 @@ pub const IMAGE_COMMAND_CATALOG: &[ImageCommandDescriptor] = &[
         parameters: "{layer: unsigned integer, target: unsigned integer, position: above|below}",
         photocraft_command: "layer.moveTo",
     },
+
+    ImageCommandDescriptor {
+        id: "image.adjustment_layer.hue_saturation",
+        label: "Hue / saturation adjustment layer",
+        description: "Create a non-destructive hue and saturation adjustment layer.",
+        parameters: "{hue: -180..180, saturation: -100..100}",
+        photocraft_command: "layer.newAdjustmentLayer.hueSaturation",
+    },
+    ImageCommandDescriptor {
+        id: "image.adjustment_layer.levels",
+        label: "Levels adjustment layer",
+        description: "Create a non-destructive levels adjustment layer.",
+        parameters: "{inBlack: 0..254, inWhite: 1..255, gamma: positive finite number}",
+        photocraft_command: "layer.newAdjustmentLayer.levels",
+    },
+    ImageCommandDescriptor {
+        id: "image.adjustment_layer.curves",
+        label: "Curves adjustment layer",
+        description: "Create a non-destructive curves adjustment layer with ascending input points.",
+        parameters: "{points: [[x,y], ...], at least 2 points with strictly ascending x}",
+        photocraft_command: "layer.newAdjustmentLayer.curves",
+    },
+    ImageCommandDescriptor {
+        id: "image.smart_filter.prepare",
+        label: "Prepare Smart Filters",
+        description: "Convert the active layer or selected layers for non-destructive filters.",
+        parameters: "{layer?: unsigned integer}",
+        photocraft_command: "filter.convertForSmartFilters",
+    },
+    ImageCommandDescriptor {
+        id: "image.smart_filter.gaussian_blur",
+        label: "Add Gaussian Blur",
+        description: "Add a Gaussian Blur filter; prepare a Smart Object first for non-destructive behavior.",
+        parameters: "{radius: 0.1..1000}",
+        photocraft_command: "filter.blur.gaussianBlur",
+    },
+    ImageCommandDescriptor {
+        id: "image.smart_filter.set_params",
+        label: "Edit Smart Filter",
+        description: "Update parameters of an existing Smart Filter by stack index.",
+        parameters: "{layer?: unsigned integer, index: unsigned integer, params: object}",
+        photocraft_command: "layer.smartFilter.setParams",
+    },
+    ImageCommandDescriptor {
+        id: "image.smart_filter.set_visible",
+        label: "Set Smart Filter visibility",
+        description: "Show or hide an existing Smart Filter by stack index.",
+        parameters: "{layer?: unsigned integer, index: unsigned integer, visible: boolean}",
+        photocraft_command: "layer.smartFilter.setVisible",
+    },
+    ImageCommandDescriptor {
+        id: "image.smart_filter.move",
+        label: "Move Smart Filter",
+        description: "Move an existing Smart Filter to another stack index.",
+        parameters: "{layer?: unsigned integer, index: unsigned integer, to: unsigned integer}",
+        photocraft_command: "layer.smartFilter.move",
+    },
+    ImageCommandDescriptor {
+        id: "image.smart_filter.delete",
+        label: "Delete Smart Filter",
+        description: "Delete an existing Smart Filter by stack index.",
+        parameters: "{layer?: unsigned integer, index: unsigned integer}",
+        photocraft_command: "layer.smartFilter.delete",
+    },
+    ImageCommandDescriptor {
+        id: "image.smart_filter.toggle",
+        label: "Toggle Smart Filters",
+        description: "Enable or disable the Smart Filter stack on a Smart Object layer.",
+        parameters: "{layer?: unsigned integer, enabled: boolean}",
+        photocraft_command: "layer.smartFilter.disableSmartFilters",
+    },
 ];
 
 /// Translate a canonical Praxilume command ID to a verified PhotoCraft engine ID.
@@ -106,8 +177,15 @@ impl ResampleMethod {
     }
 }
 
+fn validate_blur_radius(radius: f64) -> Result<()> {
+    if !radius.is_finite() || !(0.1..=1000.0).contains(&radius) {
+        bail!("Gaussian Blur radius must be finite and between 0.1 and 1000");
+    }
+    Ok(())
+}
+
 /// Typed inputs for the first, existing-document image capability pack.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ImageOperation {
     Invert,
     Crop {
@@ -134,6 +212,47 @@ pub enum ImageOperation {
         target: u64,
         position: LayerPosition,
     },
+    CreateHueSaturationAdjustmentLayer {
+        hue: i32,
+        saturation: i32,
+    },
+    CreateLevelsAdjustmentLayer {
+        in_black: u8,
+        in_white: u8,
+        gamma: f64,
+    },
+    CreateCurvesAdjustmentLayer {
+        points: Vec<(u8, u8)>,
+    },
+    PrepareSmartFilters {
+        layer: Option<u64>,
+    },
+    AddGaussianBlur {
+        radius: f64,
+    },
+    SetSmartFilterParams {
+        layer: Option<u64>,
+        index: u32,
+        params: Value,
+    },
+    SetSmartFilterVisibility {
+        layer: Option<u64>,
+        index: u32,
+        visible: bool,
+    },
+    MoveSmartFilter {
+        layer: Option<u64>,
+        index: u32,
+        to: u32,
+    },
+    DeleteSmartFilter {
+        layer: Option<u64>,
+        index: u32,
+    },
+    ToggleSmartFilters {
+        layer: Option<u64>,
+        enabled: bool,
+    },
 }
 
 impl ImageOperation {
@@ -145,6 +264,16 @@ impl ImageOperation {
             Self::BrightnessContrast { .. } => "image.brightness_contrast",
             Self::CreateLayer { .. } => "image.layer.create",
             Self::MoveLayer { .. } => "image.layer.move",
+            Self::CreateHueSaturationAdjustmentLayer { .. } => "image.adjustment_layer.hue_saturation",
+            Self::CreateLevelsAdjustmentLayer { .. } => "image.adjustment_layer.levels",
+            Self::CreateCurvesAdjustmentLayer { .. } => "image.adjustment_layer.curves",
+            Self::PrepareSmartFilters { .. } => "image.smart_filter.prepare",
+            Self::AddGaussianBlur { .. } => "image.smart_filter.gaussian_blur",
+            Self::SetSmartFilterParams { .. } => "image.smart_filter.set_params",
+            Self::SetSmartFilterVisibility { .. } => "image.smart_filter.set_visible",
+            Self::MoveSmartFilter { .. } => "image.smart_filter.move",
+            Self::DeleteSmartFilter { .. } => "image.smart_filter.delete",
+            Self::ToggleSmartFilters { .. } => "image.smart_filter.toggle",
         }
     }
 
@@ -196,6 +325,82 @@ impl ImageOperation {
                     bail!("image.layer.move requires distinct layer and target IDs");
                 }
                 Ok(json!({"layer": layer, "target": target, "position": position.as_str()}))
+            }
+            Self::CreateHueSaturationAdjustmentLayer { hue, saturation } => {
+                if !(-180..=180).contains(hue) {
+                    bail!("hue must be between -180 and 180 degrees");
+                }
+                if !(-100..=100).contains(saturation) {
+                    bail!("saturation must be between -100 and 100");
+                }
+                Ok(json!({"hue": hue, "saturation": saturation}))
+            }
+            Self::CreateLevelsAdjustmentLayer { in_black, in_white, gamma } => {
+                if in_black >= in_white {
+                    bail!("levels in_black must be less than in_white");
+                }
+                if !gamma.is_finite() || *gamma <= 0.0 {
+                    bail!("levels gamma must be a finite positive number");
+                }
+                Ok(json!({"inBlack": in_black, "inWhite": in_white, "gamma": gamma}))
+            }
+            Self::CreateCurvesAdjustmentLayer { points } => {
+                if points.len() < 2 {
+                    bail!("curves requires at least two points");
+                }
+                if points.windows(2).any(|pair| pair[0].0 >= pair[1].0) {
+                    bail!("curves points must have strictly ascending input coordinates");
+                }
+                Ok(json!({"points": points}))
+            }
+            Self::PrepareSmartFilters { layer } => {
+                let mut params = json!({});
+                if let Some(layer) = layer {
+                    params["layer"] = json!(layer);
+                }
+                Ok(params)
+            }
+            Self::AddGaussianBlur { radius } => {
+                validate_blur_radius(*radius)?;
+                Ok(json!({"radius": radius}))
+            }
+            Self::SetSmartFilterParams { layer, index, params } => {
+                if !params.is_object() {
+                    bail!("Smart Filter params must be a JSON object");
+                }
+                let mut result = json!({"index": index, "params": params});
+                if let Some(layer) = layer {
+                    result["layer"] = json!(layer);
+                }
+                Ok(result)
+            }
+            Self::SetSmartFilterVisibility { layer, index, visible } => {
+                let mut result = json!({"index": index, "visible": visible});
+                if let Some(layer) = layer {
+                    result["layer"] = json!(layer);
+                }
+                Ok(result)
+            }
+            Self::MoveSmartFilter { layer, index, to } => {
+                let mut result = json!({"index": index, "to": to});
+                if let Some(layer) = layer {
+                    result["layer"] = json!(layer);
+                }
+                Ok(result)
+            }
+            Self::DeleteSmartFilter { layer, index } => {
+                let mut result = json!({"index": index});
+                if let Some(layer) = layer {
+                    result["layer"] = json!(layer);
+                }
+                Ok(result)
+            }
+            Self::ToggleSmartFilters { layer, enabled } => {
+                let mut result = json!({"enabled": enabled});
+                if let Some(layer) = layer {
+                    result["layer"] = json!(layer);
+                }
+                Ok(result)
             }
         }
     }
@@ -286,6 +491,90 @@ mod tests {
             .params()
             .is_err()
         );
+    }
+
+    #[test]
+    fn adjustment_layers_validate_inputs_and_serialize_upstream_params() {
+        assert_eq!(
+            ImageOperation::CreateHueSaturationAdjustmentLayer { hue: -30, saturation: 50 }
+                .params().unwrap(),
+            json!({"hue": -30, "saturation": 50})
+        );
+        assert!(ImageOperation::CreateHueSaturationAdjustmentLayer { hue: 181, saturation: 0 }.params().is_err());
+        assert_eq!(
+            ImageOperation::CreateLevelsAdjustmentLayer { in_black: 8, in_white: 245, gamma: 1.05 }
+                .params().unwrap(),
+            json!({"inBlack": 8, "inWhite": 245, "gamma": 1.05})
+        );
+        assert!(ImageOperation::CreateLevelsAdjustmentLayer { in_black: 200, in_white: 100, gamma: 1.0 }.params().is_err());
+        assert!(ImageOperation::CreateLevelsAdjustmentLayer { in_black: 0, in_white: 255, gamma: f64::NAN }.params().is_err());
+    }
+
+    #[test]
+    fn curves_points_must_have_ascending_input_coordinates() {
+        assert_eq!(
+            ImageOperation::CreateCurvesAdjustmentLayer {
+                points: vec![(0, 0), (128, 140), (255, 255)]
+            }.params().unwrap(),
+            json!({"points": [[0, 0], [128, 140], [255, 255]]})
+        );
+        assert!(ImageOperation::CreateCurvesAdjustmentLayer { points: vec![(0, 0)] }.params().is_err());
+        assert!(ImageOperation::CreateCurvesAdjustmentLayer { points: vec![(128, 140), (128, 200)] }.params().is_err());
+    }
+
+    #[test]
+    fn smart_filter_operations_validate_and_keep_optional_layer_scoping() {
+        assert_eq!(
+            ImageOperation::PrepareSmartFilters { layer: Some(7) }.params().unwrap(),
+            json!({"layer": 7})
+        );
+        assert_eq!(
+            ImageOperation::AddGaussianBlur { radius: 3.0 }.params().unwrap(),
+            json!({"radius": 3.0})
+        );
+        assert!(ImageOperation::AddGaussianBlur { radius: f64::INFINITY }.params().is_err());
+        assert_eq!(
+            ImageOperation::SetSmartFilterParams {
+                layer: Some(4),
+                index: 1,
+                params: json!({"radius": 6}),
+            }.params().unwrap(),
+            json!({"layer": 4, "index": 1, "params": {"radius": 6}})
+        );
+        assert!(ImageOperation::SetSmartFilterParams {
+            layer: None,
+            index: 0,
+            params: json!([]),
+        }.params().is_err());
+        assert_eq!(
+            ImageOperation::ToggleSmartFilters { layer: None, enabled: false }.params().unwrap(),
+            json!({"enabled": false})
+        );
+        assert_eq!(
+            ImageOperation::MoveSmartFilter { layer: Some(3), index: 0, to: 2 }.params().unwrap(),
+            json!({"layer": 3, "index": 0, "to": 2})
+        );
+        assert_eq!(
+            ImageOperation::DeleteSmartFilter { layer: None, index: 2 }.params().unwrap(),
+            json!({"index": 2})
+        );
+    }
+
+    #[test]
+    fn new_canonical_commands_map_to_verified_photocraft_ids() {
+        assert_eq!(
+            upstream_command_id("image.adjustment_layer.curves"),
+            Some("layer.newAdjustmentLayer.curves")
+        );
+        assert_eq!(
+            upstream_command_id("image.smart_filter.gaussian_blur"),
+            Some("filter.blur.gaussianBlur")
+        );
+        assert_eq!(
+            upstream_command_id("image.smart_filter.set_params"),
+            Some("layer.smartFilter.setParams")
+        );
+        assert_eq!(IMAGE_COMMAND_CATALOG.len(), 16);
     }
 
     #[test]
