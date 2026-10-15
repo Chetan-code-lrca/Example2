@@ -71,7 +71,7 @@ The core deliberately stays independent of renderers and codecs. Those belong be
 
 ### PhotoCraft bridge status
 
-The first upstream adapter now follows PhotoCraft's authenticated loopback protocol: it sends the auth frame first, then invokes `engine.execute` with a validated command ID and object-or-null parameters. It checks both authentication and command replies, surfaces upstream errors, and allows up to 65 seconds for responses to cover PhotoCraft's documented 60-second command window. This is the PhotoCraft-specific adapter path, not a claim that all seven ArtCraft apps share a wire protocol.
+The first upstream adapter now follows PhotoCraft's authenticated loopback protocol: it sends the auth frame first, then invokes `engine.execute` with a validated command ID and object-or-null parameters. It checks both authentication and command replies, surfaces upstream errors, and allows up to 65 seconds for responses to cover PhotoCraft's documented 60-second command window. This is the PhotoCraft-specific adapter path, not a claim that all seven ArtCraft apps share a wire protocol. The CLI also accepts `PHOTOCRAFT_CONTROL_TOKEN` from the environment when `--token` is omitted; prefer this to avoid putting the secret in the process argument list.
 
 ## Verification policy
 
