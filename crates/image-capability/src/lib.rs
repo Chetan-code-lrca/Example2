@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use praxilume_core::{Actor, CommandEnvelope, COMMAND_PROTOCOL};
+use praxilume_core::{Actor, COMMAND_PROTOCOL, CommandEnvelope};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -110,11 +110,30 @@ impl ResampleMethod {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImageOperation {
     Invert,
-    Crop { x: i32, y: i32, width: i32, height: i32 },
-    Resize { width: i32, height: i32, resample: ResampleMethod },
-    BrightnessContrast { brightness: i32, contrast: i32 },
-    CreateLayer { name: Option<String>, position: LayerPosition },
-    MoveLayer { layer: u64, target: u64, position: LayerPosition },
+    Crop {
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    },
+    Resize {
+        width: i32,
+        height: i32,
+        resample: ResampleMethod,
+    },
+    BrightnessContrast {
+        brightness: i32,
+        contrast: i32,
+    },
+    CreateLayer {
+        name: Option<String>,
+        position: LayerPosition,
+    },
+    MoveLayer {
+        layer: u64,
+        target: u64,
+        position: LayerPosition,
+    },
 }
 
 impl ImageOperation {
@@ -132,13 +151,22 @@ impl ImageOperation {
     pub fn params(&self) -> Result<Value> {
         match self {
             Self::Invert => Ok(json!({})),
-            Self::Crop { x, y, width, height } => {
+            Self::Crop {
+                x,
+                y,
+                width,
+                height,
+            } => {
                 if *width <= 0 || *height <= 0 {
                     bail!("image.crop requires positive width and height");
                 }
                 Ok(json!({"x": x, "y": y, "width": width, "height": height}))
             }
-            Self::Resize { width, height, resample } => {
+            Self::Resize {
+                width,
+                height,
+                resample,
+            } => {
                 if *width <= 0 || *height <= 0 {
                     bail!("image.resize requires positive width and height");
                 }
@@ -148,9 +176,10 @@ impl ImageOperation {
                     "resample": resample.as_str(),
                 }))
             }
-            Self::BrightnessContrast { brightness, contrast } => {
-                Ok(json!({"brightness": brightness, "contrast": contrast}))
-            }
+            Self::BrightnessContrast {
+                brightness,
+                contrast,
+            } => Ok(json!({"brightness": brightness, "contrast": contrast})),
             Self::CreateLayer { name, position } => match name {
                 Some(value) if value.trim().is_empty() => {
                     bail!("image.layer.create name must not be empty");
@@ -158,7 +187,11 @@ impl ImageOperation {
                 Some(value) => Ok(json!({"name": value, "position": position.as_str()})),
                 None => Ok(json!({"position": position.as_str()})),
             },
-            Self::MoveLayer { layer, target, position } => {
+            Self::MoveLayer {
+                layer,
+                target,
+                position,
+            } => {
                 if layer == target {
                     bail!("image.layer.move requires distinct layer and target IDs");
                 }
@@ -201,40 +234,70 @@ mod tests {
 
     #[test]
     fn crop_rejects_non_positive_dimensions_and_keeps_negative_origin() {
-        let valid = ImageOperation::Crop { x: -10, y: 4, width: 80, height: 60 };
+        let valid = ImageOperation::Crop {
+            x: -10,
+            y: 4,
+            width: 80,
+            height: 60,
+        };
         assert_eq!(
             valid.params().expect("valid crop"),
             json!({"x": -10, "y": 4, "width": 80, "height": 60})
         );
-        let invalid = ImageOperation::Crop { x: 0, y: 0, width: 0, height: 10 };
+        let invalid = ImageOperation::Crop {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 10,
+        };
         assert!(invalid.params().is_err());
     }
 
     #[test]
     fn resize_requires_positive_dimensions() {
         let valid = ImageOperation::Resize {
-            width: 1280, height: 720, resample: ResampleMethod::Lanczos,
+            width: 1280,
+            height: 720,
+            resample: ResampleMethod::Lanczos,
         };
         assert_eq!(
             valid.params().expect("valid resize"),
             json!({"width": 1280, "height": 720, "resample": "lanczos"})
         );
-        assert!(ImageOperation::Resize {
-            width: -1, height: 720, resample: ResampleMethod::Bicubic,
-        }.params().is_err());
+        assert!(
+            ImageOperation::Resize {
+                width: -1,
+                height: 720,
+                resample: ResampleMethod::Bicubic,
+            }
+            .params()
+            .is_err()
+        );
     }
 
     #[test]
     fn layer_move_rejects_a_self_target() {
-        assert!(ImageOperation::MoveLayer {
-            layer: 9, target: 9, position: LayerPosition::Above,
-        }.params().is_err());
+        assert!(
+            ImageOperation::MoveLayer {
+                layer: 9,
+                target: 9,
+                position: LayerPosition::Above,
+            }
+            .params()
+            .is_err()
+        );
     }
 
     #[test]
     fn catalog_maps_canonical_ids_to_verified_photocraft_ids() {
-        assert_eq!(upstream_command_id("image.invert"), Some("image.adjustments.invert"));
-        assert_eq!(upstream_command_id("image.layer.move"), Some("layer.moveTo"));
+        assert_eq!(
+            upstream_command_id("image.invert"),
+            Some("image.adjustments.invert")
+        );
+        assert_eq!(
+            upstream_command_id("image.layer.move"),
+            Some("layer.moveTo")
+        );
         assert_eq!(upstream_command_id("image.not_supported"), None);
         assert_eq!(IMAGE_CAPABILITY_PROTOCOL, "praxilume.image/v1");
     }

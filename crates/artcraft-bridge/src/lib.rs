@@ -93,8 +93,10 @@ fn authentication_frame(token: &str) -> Value {
 }
 
 fn command_frame(envelope: &CommandEnvelope) -> Value {
-    let command = upstream_command_id(envelope.command.as_str())
-        .unwrap_or(envelope.command.as_str());
+    let command = match upstream_command_id(envelope.command.as_str()) {
+        Some(command) => command,
+        None => envelope.command.as_str(),
+    };
     json!({
         "id": envelope.command_id.as_str(),
         "method": "engine.execute",
