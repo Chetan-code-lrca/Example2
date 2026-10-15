@@ -89,7 +89,7 @@ fn main() -> Result<()> {
                 .or_else(|| std::env::var("PHOTOCRAFT_CONTROL_TOKEN").ok())
                 .context("provide --token or set PHOTOCRAFT_CONTROL_TOKEN")?;
             bridge(port, &token, command, intent, params)
-        },
+        }
     }
 }
 
