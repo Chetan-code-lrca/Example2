@@ -276,7 +276,11 @@ mod tests {
     #[test]
     fn control_method_frames_are_explicit_and_token_free() {
         assert_eq!(
-            control_method_frame("praxilume-open", "app.open", json!({"path": "assets/input.png"})),
+            control_method_frame(
+                "praxilume-open",
+                "app.open",
+                json!({"path": "assets/input.png"})
+            ),
             json!({
                 "id": "praxilume-open",
                 "method": "app.open",
@@ -298,7 +302,10 @@ mod tests {
             "C:/Windows/photo.png",
             "assets/photo.png\\",
         ] {
-            assert!(validate_relative_path(path).is_err(), "path accepted: {path:?}");
+            assert!(
+                validate_relative_path(path).is_err(),
+                "path accepted: {path:?}"
+            );
         }
         assert!(validate_relative_path("assets/photo.png").is_ok());
         assert!(validate_relative_path("exports/final.png").is_ok());

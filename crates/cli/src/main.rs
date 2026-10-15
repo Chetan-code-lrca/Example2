@@ -61,14 +61,20 @@ enum Command {
         #[arg(long, default_value = "{}")]
         params: String,
     },
-    #[command(name = "photocraft-open", about = "Open an image beneath PhotoCraft's configured automation read root")]
+    #[command(
+        name = "photocraft-open",
+        about = "Open an image beneath PhotoCraft's configured automation read root"
+    )]
     PhotoCraftOpen {
         port: u16,
         path: String,
         #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
         token: Option<String>,
     },
-    #[command(name = "photocraft-save", about = "Save/export an open document beneath PhotoCraft's configured automation write root")]
+    #[command(
+        name = "photocraft-save",
+        about = "Save/export an open document beneath PhotoCraft's configured automation write root"
+    )]
     PhotoCraftSave {
         port: u16,
         path: String,
@@ -285,20 +291,14 @@ fn list_image_commands() -> Result<()> {
     Ok(())
 }
 
-
 #[cfg(test)]
 mod cli_tests {
     use super::*;
 
     #[test]
     fn parses_root_scoped_photocraft_open_command() {
-        let cli = Cli::try_parse_from([
-            "praxilume",
-            "photocraft-open",
-            "7878",
-            "assets/input.png",
-        ])
-        .expect("valid open CLI");
+        let cli = Cli::try_parse_from(["praxilume", "photocraft-open", "7878", "assets/input.png"])
+            .expect("valid open CLI");
         match cli.command {
             Command::PhotoCraftOpen { port, path, token } => {
                 assert_eq!(port, 7878);
@@ -311,13 +311,9 @@ mod cli_tests {
 
     #[test]
     fn parses_root_scoped_photocraft_save_command() {
-        let cli = Cli::try_parse_from([
-            "praxilume",
-            "photocraft-save",
-            "7878",
-            "exports/edited.png",
-        ])
-        .expect("valid save CLI");
+        let cli =
+            Cli::try_parse_from(["praxilume", "photocraft-save", "7878", "exports/edited.png"])
+                .expect("valid save CLI");
         match cli.command {
             Command::PhotoCraftSave { port, path, token } => {
                 assert_eq!(port, 7878);
