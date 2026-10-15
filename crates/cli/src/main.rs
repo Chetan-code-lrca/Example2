@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use praxilume_artcraft_bridge::{ControlEndpoint, VectorCraftEndpoint};
+use praxilume_artcraft_bridge::{ControlEndpoint, FilmCraftEndpoint, VectorCraftEndpoint};
 use praxilume_core::{Actor, CommandEnvelope, Id, Operation, Project};
 use praxilume_image_capability::IMAGE_COMMAND_CATALOG;
 use praxilume_runtime::ProjectStore;
@@ -92,6 +92,22 @@ enum Command {
     VectorCraftInspect {
         port: u16,
     },
+    #[command(name = "filmcraft", about = "Run a command through FilmCraft's localhost control socket")]
+    FilmCraft {
+        port: u16,
+        #[arg(long)]
+        command: String,
+        #[arg(long, default_value = "{}")]
+        params: String,
+    },
+    #[command(name = "filmcraft-commands", about = "List commands exposed by a running FilmCraft instance")]
+    FilmCraftCommands {
+        port: u16,
+    },
+    #[command(name = "filmcraft-sequence", about = "Inspect the active FilmCraft sequence as JSON")]
+    FilmCraftSequence {
+        port: u16,
+    },
     Artcraft {
         port: u16,
         #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
@@ -170,6 +186,17 @@ fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&response)?);
             Ok(())
         }
+        Command::FilmCraft { port, command, params } => filmcraft(port, command, params),
+        Command::FilmCraftCommands { port } => {
+            let response = FilmCraftEndpoint::localhost(port).list_commands()?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
+        Command::FilmCraftSequence { port } => {
+            let response = FilmCraftEndpoint::localhost(port).inspect_sequence()?;
+            println!("{}", serde_json::to_string_pretty(&response)?);
+            Ok(())
+        }
         Command::Artcraft {
             port,
             token,
@@ -206,6 +233,14 @@ fn vectorcraft(port: u16, command: String, intent: String, params: String) -> Re
 
 fn list_vector_commands() -> Result<()> {
     println!("{}", serde_json::to_string_pretty(VECTOR_COMMAND_CATALOG)?);
+    Ok(())
+}
+
+fn filmcraft(port: u16, command: String, params: String) -> Result<()> {
+    let params: serde_json::Value =
+        serde_json::from_str(&params).context("params must be valid JSON")?;
+    let response = FilmCraftEndpoint::localhost(port).execute(&command, params)?;
+    println!("{}", serde_json::to_string_pretty(&response)?);
     Ok(())
 }
 
@@ -445,6 +480,33 @@ mod cli_tests {
                 .expect("valid document inspection CLI")
                 .command,
             Command::VectorCraftInspect { port: 7979 }
+        ));
+    }
+
+    #[test]
+    fn parses_filmcraft_bridge_commands() {
+        match Cli::try_parse_from([
+            "praxilume", "filmcraft", "9876", "--command", "sequence.inspect",
+            "--params", "{}"
+        ]).expect("valid FilmCraft command").command {
+            Command::FilmCraft { port, command, params } => {
+                assert_eq!(port, 9876);
+                assert_eq!(command, "sequence.inspect");
+                assert_eq!(params, "{}");
+            }
+            _ => panic!("expected filmcraft subcommand"),
+        }
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "filmcraft-commands", "9876"])
+                .expect("valid command discovery")
+                .command,
+            Command::FilmCraftCommands { port: 9876 }
+        ));
+        assert!(matches!(
+            Cli::try_parse_from(["praxilume", "filmcraft-sequence", "9876"])
+                .expect("valid sequence inspection")
+                .command,
+            Command::FilmCraftSequence { port: 9876 }
         ));
     }
 

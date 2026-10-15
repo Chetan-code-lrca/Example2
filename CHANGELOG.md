@@ -18,6 +18,7 @@
 - Initial `praxilume.vector/v1` capability pack for rectangle, ellipse, SVG path, fill and stroke.
 - Separate unauthenticated-but-loopback-only VectorCraft bridge with root-scoped open/export.
 - Live VectorCraft command discovery via `engine.commands` and read-only document inspection via `document.inspect`.
+- Initial FilmCraft localhost bridge for generic engine commands, command discovery and read-only sequence inspection.
 - Portable path validation for absolute paths, traversal, and drive-qualified paths.
 - CI, protocol schema, security policy, roadmap, and upstream reuse documentation.
 

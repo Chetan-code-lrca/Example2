@@ -27,7 +27,8 @@ Every operation must be represented as a Praxilume command and remain inspectabl
 - [x] Live command discovery through VectorCraft's `engine.commands` method
 - [x] Read-only active-document inspection through `document.inspect`
 - [ ] Rich vector operations: groups, boolean geometry, typography, and multi-artboard workflows
-- Timeline/media capability pack
+- [x] Initial FilmCraft bridge: loopback command execution, live command discovery and sequence inspection
+- [ ] Typed timeline operations and Praxilume timeline object model
 - Photo/RAW capability pack
 - PDF/publishing capability pack
 - Motion/VFX capability pack

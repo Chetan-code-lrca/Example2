@@ -64,6 +64,12 @@ praxilume vectorcraft-export 7979 out/logo.svg
 praxilume vectorcraft-commands 7979 # inspect commands exposed by this VectorCraft build
 praxilume vectorcraft-inspect 7979  # read the active document tree as JSON
 praxilume vector-commands            # list Praxilume's stable canonical vector subset
+
+# Start FilmCraft with its localhost-only control socket enabled.
+filmcraft --control 9876
+praxilume filmcraft-commands 9876     # discover live command IDs and parameter schemas
+praxilume filmcraft-sequence 9876     # read the active timeline/sequence
+praxilume filmcraft 9876 --command sequence.inspect --params '{}'
 ```
 
 ## Architecture
@@ -97,6 +103,12 @@ VectorCraft uses a different desktop JSON-lines control protocol from PhotoCraft
 The initial `praxilume.vector/v1` catalog provides typed rectangle, ellipse and SVG-path creation plus fill/stroke color operations. These commands act on an already-open document (except open/export), and the new shapes use the current VectorCraft drawing appearance. The adapter currently supports the five listed operations; grouping, boolean geometry, typography and multi-artboard workflow remain future work.
 
 The CLI can now query `engine.commands` on the running VectorCraft instance with `vectorcraft-commands`, so you can inspect upstream functionality before we add a canonical adapter mapping. Use `vectorcraft-inspect` to call VectorCraft's read-only `document.inspect` method and retrieve the active layer/object tree, selection, key object, history and paint defaults as JSON. This gives a future agent a grounded view of the real document instead of asking it to infer hidden objects. Both calls use the adapter's loopback-only socket and preserve upstream response/error validation; inspection requires an open document.
+
+### FilmCraft bridge status
+
+Praxilume now has an initial FilmCraft adapter for its JSON-lines control protocol. It pins connections to `127.0.0.1`, checks the echoed request ID and the upstream `ok`/error response, and exposes live command discovery plus read-only active-sequence inspection. The generic `filmcraft` command forwards an upstream engine command through `engine.execute`; consult `filmcraft-commands` to inspect command IDs and parameters before executing edits.
+
+**Security:** FilmCraft's control socket has no authentication. Enable it only while actively using the integration, keep it bound to loopback, and never expose the port through LAN, a reverse proxy, or the public internet. Praxilume hard-codes the destination to loopback but cannot secure a separately exposed upstream service.
 
 ## Verification policy
 

@@ -240,6 +240,80 @@ impl VectorCraftEndpoint {
     }
 }
 
+/// FilmCraft exposes an unauthenticated JSON-lines control socket, so the endpoint
+/// is hard-coded to loopback. Enable FilmCraft control only while using it; never
+/// expose its port to another host.
+#[derive(Debug, Clone)]
+pub struct FilmCraftEndpoint {
+    port: u16,
+    connect_timeout: Duration,
+    read_timeout: Duration,
+}
+
+impl FilmCraftEndpoint {
+    pub fn localhost(port: u16) -> Self {
+        Self {
+            port,
+            connect_timeout: Duration::from_secs(3),
+            read_timeout: Duration::from_secs(65),
+        }
+    }
+
+    /// Run one FilmCraft engine command using its documented engine.execute method.
+    pub fn execute(&self, command: &str, params: Value) -> Result<Value> {
+        validate_engine_params(&params)?;
+        self.send_method(
+            "praxilume-filmcraft-execute",
+            "engine.execute",
+            json!({"command": command, "params": params}),
+            &format!("command '{command}'"),
+        )
+    }
+
+    /// Read the current engine command registry, including command IDs and parameters.
+    pub fn list_commands(&self) -> Result<Value> {
+        self.send_method(
+            "praxilume-filmcraft-commands",
+            "engine.commands",
+            json!({}),
+            "engine.commands",
+        )
+    }
+
+    /// Read the active sequence without mutating the project.
+    pub fn inspect_sequence(&self) -> Result<Value> {
+        self.execute("sequence.inspect", json!({}))
+    }
+
+    fn send_method(
+        &self,
+        request_id: &str,
+        method: &str,
+        params: Value,
+        phase: &str,
+    ) -> Result<Value> {
+        let address = format!("127.0.0.1:{}", self.port)
+            .to_socket_addrs()?
+            .next()
+            .context("could not resolve FilmCraft loopback endpoint")?;
+        let mut stream = TcpStream::connect_timeout(&address, self.connect_timeout)?;
+        stream.set_read_timeout(Some(self.read_timeout))?;
+        stream.set_write_timeout(Some(self.connect_timeout))?;
+        let mut reader = BufReader::new(stream.try_clone()?);
+
+        write_json_line(
+            &mut stream,
+            &control_method_frame(request_id, method, params),
+        )?;
+        let response = read_json_line(&mut reader, phase)?;
+        if response.get("id") != Some(&json!(request_id)) {
+            bail!("FilmCraft control response ID did not match the request");
+        }
+        ensure_filmcraft_success(&response, phase)?;
+        Ok(response)
+    }
+}
+
 fn vector_command_frame(envelope: &CommandEnvelope) -> Value {
     let command = match upstream_vector_command_id(envelope.command.as_str()) {
         Some(command) => command,
@@ -266,6 +340,20 @@ fn ensure_vector_success(response: &Value, phase: &str) -> Result<()> {
             bail!("VectorCraft {phase} failed: {detail}");
         }
         None => bail!("VectorCraft returned an invalid {phase} response (expected boolean 'ok')"),
+    }
+}
+
+fn ensure_filmcraft_success(response: &Value, phase: &str) -> Result<()> {
+    match response.get("ok").and_then(Value::as_bool) {
+        Some(true) => Ok(()),
+        Some(false) => {
+            let detail = response
+                .get("error")
+                .and_then(Value::as_str)
+                .unwrap_or("no error detail");
+            bail!("FilmCraft {phase} failed: {detail}");
+        }
+        None => bail!("FilmCraft returned an invalid {phase} response (expected boolean 'ok')"),
     }
 }
 
@@ -476,6 +564,48 @@ mod tests {
                 "params": {}
             })
         );
+    }
+
+    #[test]
+    fn filmcraft_frames_match_documented_control_protocol() {
+        assert_eq!(
+            control_method_frame(
+                "praxilume-filmcraft-commands",
+                "engine.commands",
+                json!({})
+            ),
+            json!({
+                "id": "praxilume-filmcraft-commands",
+                "method": "engine.commands",
+                "params": {}
+            })
+        );
+        assert_eq!(
+            control_method_frame(
+                "praxilume-filmcraft-execute",
+                "engine.execute",
+                json!({"command": "sequence.inspect", "params": {}})
+            ),
+            json!({
+                "id": "praxilume-filmcraft-execute",
+                "method": "engine.execute",
+                "params": {"command": "sequence.inspect", "params": {}}
+            })
+        );
+    }
+
+    #[test]
+    fn filmcraft_success_responses_are_validated() {
+        assert!(ensure_filmcraft_success(
+            &json!({"id":"request-1","ok":true,"result":{}}),
+            "test"
+        ).is_ok());
+        let error = ensure_filmcraft_success(
+            &json!({"id":"request-1","ok":false,"error":"no active sequence"}),
+            "command"
+        ).expect_err("failed response must be reported");
+        assert!(error.to_string().contains("no active sequence"));
+        assert!(ensure_filmcraft_success(&json!({"id":"request-1"}), "test").is_err());
     }
 
     #[test]
