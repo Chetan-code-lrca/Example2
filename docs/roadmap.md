@@ -23,7 +23,8 @@ Every operation must be represented as a Praxilume command and remain inspectabl
 
 ## Phase 3 — creative capability graph
 
-- Vector capability pack
+- [x] Initial VectorCraft capability pack: rectangles, ellipses, SVG paths, fill/stroke, loopback control, read-root open and write-root export
+- [ ] Rich vector operations: groups, boolean geometry, typography, object-level inspection and multi-artboard workflows
 - Timeline/media capability pack
 - Photo/RAW capability pack
 - PDF/publishing capability pack

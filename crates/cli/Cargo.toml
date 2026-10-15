@@ -20,4 +20,5 @@ praxilume-artcraft-bridge = { path = "../artcraft-bridge" }
 praxilume-core = { path = "../core" }
 praxilume-image-capability = { path = "../image-capability" }
 praxilume-runtime = { path = "../runtime" }
+praxilume-vector-capability = { path = "../vector-capability" }
 serde_json.workspace = true

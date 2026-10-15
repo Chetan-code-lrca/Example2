@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use praxilume_core::CommandEnvelope;
-use praxilume_image_capability::upstream_command_id;
+use praxilume_image_capability::upstream_command_id as upstream_image_command_id;
+use praxilume_vector_capability::upstream_command_id as upstream_vector_command_id;
 use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -123,6 +124,136 @@ impl ControlEndpoint {
     }
 }
 
+/// VectorCraft uses an unauthenticated loopback control socket. Keep this adapter
+/// pinned to 127.0.0.1 and configure VectorCraft's automation roots before use.
+#[derive(Debug, Clone)]
+pub struct VectorCraftEndpoint {
+    port: u16,
+    connect_timeout: Duration,
+    read_timeout: Duration,
+}
+
+impl VectorCraftEndpoint {
+    pub fn localhost(port: u16) -> Self {
+        Self {
+            port,
+            connect_timeout: Duration::from_secs(3),
+            read_timeout: Duration::from_secs(65),
+        }
+    }
+
+    pub fn send(&self, envelope: &CommandEnvelope) -> Result<Value> {
+        if envelope.dry_run {
+            return Ok(json!({
+                "dry_run": true,
+                "protocol": envelope.protocol,
+                "command_id": envelope.command_id.as_str(),
+                "command": envelope.command,
+                "params": envelope.params,
+            }));
+        }
+        validate_engine_params(&envelope.params)?;
+        let request = vector_command_frame(envelope);
+        self.send_request(
+            envelope.command_id.as_str(),
+            &request,
+            &format!("command '{}'", envelope.command),
+        )
+    }
+
+    /// Open a file beneath VectorCraft's configured automation read root.
+    pub fn open_document(&self, relative_path: &str) -> Result<Value> {
+        validate_relative_path(relative_path)?;
+        self.send_method(
+            "praxilume-vector-open",
+            "app.open",
+            json!({"path": relative_path}),
+            "app.open",
+        )
+    }
+
+    /// Export the active document beneath VectorCraft's configured automation write root.
+    pub fn export_document(&self, relative_path: &str) -> Result<Value> {
+        validate_relative_path(relative_path)?;
+        self.send_method(
+            "praxilume-vector-export",
+            "app.export",
+            json!({"path": relative_path}),
+            "app.export",
+        )
+    }
+
+    fn send_method(
+        &self,
+        request_id: &str,
+        method: &str,
+        params: Value,
+        phase: &str,
+    ) -> Result<Value> {
+        self.send_request(
+            request_id,
+            &control_method_frame(request_id, method, params),
+            phase,
+        )
+    }
+
+    fn send_request(
+        &self,
+        request_id: &str,
+        request: &Value,
+        phase: &str,
+    ) -> Result<Value> {
+        let address = format!("127.0.0.1:{}", self.port)
+            .to_socket_addrs()?
+            .next()
+            .context("could not resolve VectorCraft loopback endpoint")?;
+        let mut stream = TcpStream::connect_timeout(&address, self.connect_timeout)?;
+        stream.set_read_timeout(Some(self.read_timeout))?;
+        stream.set_write_timeout(Some(self.connect_timeout))?;
+        let mut reader = BufReader::new(stream.try_clone()?);
+
+        // VectorCraft's control protocol has no authentication handshake. The socket is
+        // therefore deliberately hard-coded to loopback, and upstream file access must be
+        // constrained with --automation-read-root / --automation-write-root.
+        write_json_line(&mut stream, request)?;
+        let response = read_json_line(&mut reader, phase)?;
+        if response.get("id") != Some(&json!(request_id)) {
+            bail!("VectorCraft control response ID did not match the request");
+        }
+        ensure_vector_success(&response, phase)?;
+        Ok(response)
+    }
+}
+
+fn vector_command_frame(envelope: &CommandEnvelope) -> Value {
+    let command = match upstream_vector_command_id(envelope.command.as_str()) {
+        Some(command) => command,
+        None => envelope.command.as_str(),
+    };
+    json!({
+        "id": envelope.command_id.as_str(),
+        "method": "engine.execute",
+        "params": {
+            "command": command,
+            "params": envelope.params,
+        },
+    })
+}
+
+fn ensure_vector_success(response: &Value, phase: &str) -> Result<()> {
+    match response.get("ok").and_then(Value::as_bool) {
+        Some(true) => Ok(()),
+        Some(false) => {
+            let detail = response
+                .get("error")
+                .and_then(Value::as_str)
+                .unwrap_or("no error detail");
+            bail!("VectorCraft {phase} failed: {detail}");
+        }
+        None => bail!("VectorCraft returned an invalid {phase} response (expected boolean 'ok')"),
+    }
+}
+
 fn authentication_frame(token: &str) -> Value {
     json!({
         "id": "auth",
@@ -132,7 +263,7 @@ fn authentication_frame(token: &str) -> Value {
 }
 
 fn command_frame(envelope: &CommandEnvelope) -> Value {
-    let command = match upstream_command_id(envelope.command.as_str()) {
+    let command = match upstream_image_command_id(envelope.command.as_str()) {
         Some(command) => command,
         None => envelope.command.as_str(),
     };
@@ -165,7 +296,7 @@ fn validate_relative_path(path: &str) -> Result<()> {
             .any(|part| part.is_empty() || part == "." || part == "..");
     if invalid {
         bail!(
-            "path must be normalized and relative to PhotoCraft's configured automation root; absolute paths, '.', '..', backslashes, drive prefixes, and empty path segments are not allowed"
+            "path must be normalized and relative to the configured automation root; absolute paths, '.', '..', backslashes, drive prefixes, and empty path segments are not allowed"
         );
     }
     Ok(())
@@ -173,7 +304,7 @@ fn validate_relative_path(path: &str) -> Result<()> {
 
 fn validate_engine_params(params: &Value) -> Result<()> {
     if !params.is_object() && !params.is_null() {
-        bail!("PhotoCraft engine.execute requires command params to be a JSON object or null");
+        bail!("engine.execute requires command params to be a JSON object or null");
     }
     Ok(())
 }
@@ -203,12 +334,12 @@ fn read_json_line(reader: &mut BufReader<TcpStream>, phase: &str) -> Result<Valu
     let mut line = String::new();
     let bytes = reader
         .read_line(&mut line)
-        .with_context(|| format!("failed while reading PhotoCraft {phase} response"))?;
+        .with_context(|| format!("failed while reading control-server {phase} response"))?;
     if bytes == 0 || line.trim().is_empty() {
-        bail!("PhotoCraft closed the connection without a {phase} response");
+        bail!("control server closed the connection without a {phase} response");
     }
     serde_json::from_str(line.trim())
-        .with_context(|| format!("PhotoCraft returned invalid JSON for {phase}"))
+        .with_context(|| format!("control server returned invalid JSON for {phase}"))
 }
 
 #[cfg(test)]
@@ -263,6 +394,33 @@ mod tests {
         let frame = command_frame(&envelope);
         assert_eq!(frame["params"]["command"], "image.adjustments.invert");
         assert_eq!(frame["params"]["params"], json!({}));
+    }
+
+    #[test]
+    fn vector_frame_maps_canonical_command_without_authentication() {
+        let envelope = CommandEnvelope::new(
+            "vector-1",
+            Actor::User,
+            "draw a rectangle",
+            "vector.rectangle",
+            json!({"x": 1.0, "y": 2.0, "width": 10.0, "height": 20.0}),
+        );
+        let frame = vector_command_frame(&envelope);
+        assert_eq!(frame["id"], "vector-1");
+        assert_eq!(frame["method"], "engine.execute");
+        assert_eq!(frame["params"]["command"], "shape.rectangle");
+        assert_eq!(frame["params"]["params"]["width"], 10.0);
+        assert_ne!(frame["method"], "auth");
+    }
+
+    #[test]
+    fn vectorcraft_upstream_errors_are_reported() {
+        let err = ensure_vector_success(
+            &json!({"id": "vector-1", "ok": false, "error": "no document open"}),
+            "command",
+        )
+        .expect_err("upstream error should fail");
+        assert!(err.to_string().contains("no document open"));
     }
 
     #[test]
