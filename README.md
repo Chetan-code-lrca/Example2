@@ -44,7 +44,8 @@ praxilume inspect demo.prax
 praxilume rename demo.prax --name "Poster Lab"
 praxilume import demo.prax ./image.png --extension png
 praxilume command demo.prax --command project.rename --params '{"name":"Poster Lab"}'
-praxilume artcraft 7654 --token "$ARTCRAFT_TOKEN" --command app.status
+# PhotoCraft must be running with control enabled, and a document should be open.
+praxilume artcraft 7878 --token "$PHOTOCRAFT_CONTROL_TOKEN" --command image.adjustments.invert
 ```
 
 ## Architecture
@@ -66,6 +67,10 @@ Praxilume UI / CLI / Agent / Automation
 ```
 
 The core deliberately stays independent of renderers and codecs. Those belong behind capability boundaries.
+
+### PhotoCraft bridge status
+
+The first upstream adapter now follows PhotoCraft's authenticated loopback protocol: it sends the auth frame first, then invokes `engine.execute` with a validated command ID and object-or-null parameters. It checks both authentication and command replies, surfaces upstream errors, and allows up to 65 seconds for responses to cover PhotoCraft's documented 60-second command window. This is the PhotoCraft-specific adapter path, not a claim that all seven ArtCraft apps share a wire protocol.
 
 ## Verification policy
 
