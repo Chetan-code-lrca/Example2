@@ -45,7 +45,8 @@ praxilume rename demo.prax --name "Poster Lab"
 praxilume import demo.prax ./image.png --extension png
 praxilume command demo.prax --command project.rename --params '{"name":"Poster Lab"}'
 # PhotoCraft must be running with control enabled, and a document should be open.
-praxilume artcraft 7878 --token "$PHOTOCRAFT_CONTROL_TOKEN" --command image.adjustments.invert
+export PHOTOCRAFT_CONTROL_TOKEN="$(cat /private/path/photocraft-control.token)"
+praxilume artcraft 7878 --command image.adjustments.invert
 ```
 
 ## Architecture
