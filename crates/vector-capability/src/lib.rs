@@ -301,7 +301,11 @@ mod tests {
             .is_err()
         );
         assert!(
-            VectorOperation::SetFillColor { color: "none".to_owned() }.params().is_ok()
+            VectorOperation::SetFillColor {
+                color: "none".to_owned()
+            }
+            .params()
+            .is_ok()
         );
     }
 
