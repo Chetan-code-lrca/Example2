@@ -44,7 +44,8 @@ The adapter accepts object or null command parameters, keeps the token out of co
 Example after launching PhotoCraft with `--control 7878` and opening a document:
 
 ```bash
-praxilume artcraft 7878 --token "$PHOTOCRAFT_CONTROL_TOKEN" --command image.adjustments.invert
+export PHOTOCRAFT_CONTROL_TOKEN="$(cat /private/path/photocraft-control.token)"
+praxilume artcraft 7878 --command image.adjustments.invert
 ```
 
-Keep the control endpoint bound to loopback and treat the token as a secret. Do not expose this port to untrusted networks.
+Prefer the `PHOTOCRAFT_CONTROL_TOKEN` environment variable over `--token` so the credential is not included in the Praxilume process argument list. Keep the control endpoint bound to loopback and treat the token as a secret. Do not expose this port to untrusted networks.
