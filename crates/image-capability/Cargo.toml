@@ -1,0 +1,16 @@
+[package]
+name = "praxilume-image-capability"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Typed, versioned image-edit command catalog for Praxilume."
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow.workspace = true
+praxilume-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true

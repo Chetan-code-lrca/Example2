@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use praxilume_artcraft_bridge::ControlEndpoint;
 use praxilume_core::{Actor, CommandEnvelope, Id, Operation, Project};
+use praxilume_image_capability::IMAGE_COMMAND_CATALOG;
 use praxilume_runtime::ProjectStore;
 use std::path::PathBuf;
 
@@ -48,6 +49,7 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+    ImageCommands,
     Artcraft {
         port: u16,
         #[arg(long, help = "Control token; defaults to PHOTOCRAFT_CONTROL_TOKEN")]
@@ -78,6 +80,7 @@ fn main() -> Result<()> {
             params,
             dry_run,
         } => run_command(path, command, actor, params, dry_run),
+        Command::ImageCommands => list_image_commands(),
         Command::Artcraft {
             port,
             token,
@@ -244,5 +247,10 @@ fn bridge(port: u16, token: &str, command: String, intent: String, params: Strin
     let envelope = CommandEnvelope::new("bridge-1", Actor::User, intent, command, params);
     let response = ControlEndpoint::localhost(port).send(&envelope, Some(token))?;
     println!("{}", serde_json::to_string_pretty(&response)?);
+    Ok(())
+}
+
+fn list_image_commands() -> Result<()> {
+    println!("{}", serde_json::to_string_pretty(IMAGE_COMMAND_CATALOG)?);
     Ok(())
 }
