@@ -58,7 +58,6 @@ pub const IMAGE_COMMAND_CATALOG: &[ImageCommandDescriptor] = &[
         parameters: "{layer: unsigned integer, target: unsigned integer, position: above|below}",
         photocraft_command: "layer.moveTo",
     },
-
     ImageCommandDescriptor {
         id: "image.adjustment_layer.hue_saturation",
         label: "Hue / saturation adjustment layer",
@@ -264,7 +263,9 @@ impl ImageOperation {
             Self::BrightnessContrast { .. } => "image.brightness_contrast",
             Self::CreateLayer { .. } => "image.layer.create",
             Self::MoveLayer { .. } => "image.layer.move",
-            Self::CreateHueSaturationAdjustmentLayer { .. } => "image.adjustment_layer.hue_saturation",
+            Self::CreateHueSaturationAdjustmentLayer { .. } => {
+                "image.adjustment_layer.hue_saturation"
+            }
             Self::CreateLevelsAdjustmentLayer { .. } => "image.adjustment_layer.levels",
             Self::CreateCurvesAdjustmentLayer { .. } => "image.adjustment_layer.curves",
             Self::PrepareSmartFilters { .. } => "image.smart_filter.prepare",
@@ -335,7 +336,11 @@ impl ImageOperation {
                 }
                 Ok(json!({"hue": hue, "saturation": saturation}))
             }
-            Self::CreateLevelsAdjustmentLayer { in_black, in_white, gamma } => {
+            Self::CreateLevelsAdjustmentLayer {
+                in_black,
+                in_white,
+                gamma,
+            } => {
                 if in_black >= in_white {
                     bail!("levels in_black must be less than in_white");
                 }
@@ -364,7 +369,11 @@ impl ImageOperation {
                 validate_blur_radius(*radius)?;
                 Ok(json!({"radius": radius}))
             }
-            Self::SetSmartFilterParams { layer, index, params } => {
+            Self::SetSmartFilterParams {
+                layer,
+                index,
+                params,
+            } => {
                 if !params.is_object() {
                     bail!("Smart Filter params must be a JSON object");
                 }
@@ -374,7 +383,11 @@ impl ImageOperation {
                 }
                 Ok(result)
             }
-            Self::SetSmartFilterVisibility { layer, index, visible } => {
+            Self::SetSmartFilterVisibility {
+                layer,
+                index,
+                visible,
+            } => {
                 let mut result = json!({"index": index, "visible": visible});
                 if let Some(layer) = layer {
                     result["layer"] = json!(layer);
@@ -496,66 +509,144 @@ mod tests {
     #[test]
     fn adjustment_layers_validate_inputs_and_serialize_upstream_params() {
         assert_eq!(
-            ImageOperation::CreateHueSaturationAdjustmentLayer { hue: -30, saturation: 50 }
-                .params().unwrap(),
+            ImageOperation::CreateHueSaturationAdjustmentLayer {
+                hue: -30,
+                saturation: 50,
+            }
+            .params()
+            .unwrap(),
             json!({"hue": -30, "saturation": 50})
         );
-        assert!(ImageOperation::CreateHueSaturationAdjustmentLayer { hue: 181, saturation: 0 }.params().is_err());
+        assert!(
+            ImageOperation::CreateHueSaturationAdjustmentLayer {
+                hue: 181,
+                saturation: 0,
+            }
+            .params()
+            .is_err()
+        );
         assert_eq!(
-            ImageOperation::CreateLevelsAdjustmentLayer { in_black: 8, in_white: 245, gamma: 1.05 }
-                .params().unwrap(),
+            ImageOperation::CreateLevelsAdjustmentLayer {
+                in_black: 8,
+                in_white: 245,
+                gamma: 1.05,
+            }
+            .params()
+            .unwrap(),
             json!({"inBlack": 8, "inWhite": 245, "gamma": 1.05})
         );
-        assert!(ImageOperation::CreateLevelsAdjustmentLayer { in_black: 200, in_white: 100, gamma: 1.0 }.params().is_err());
-        assert!(ImageOperation::CreateLevelsAdjustmentLayer { in_black: 0, in_white: 255, gamma: f64::NAN }.params().is_err());
+        assert!(
+            ImageOperation::CreateLevelsAdjustmentLayer {
+                in_black: 200,
+                in_white: 100,
+                gamma: 1.0,
+            }
+            .params()
+            .is_err()
+        );
+        assert!(
+            ImageOperation::CreateLevelsAdjustmentLayer {
+                in_black: 0,
+                in_white: 255,
+                gamma: f64::NAN,
+            }
+            .params()
+            .is_err()
+        );
     }
 
     #[test]
     fn curves_points_must_have_ascending_input_coordinates() {
         assert_eq!(
             ImageOperation::CreateCurvesAdjustmentLayer {
-                points: vec![(0, 0), (128, 140), (255, 255)]
-            }.params().unwrap(),
+                points: vec![(0, 0), (128, 140), (255, 255)],
+            }
+            .params()
+            .unwrap(),
             json!({"points": [[0, 0], [128, 140], [255, 255]]})
         );
-        assert!(ImageOperation::CreateCurvesAdjustmentLayer { points: vec![(0, 0)] }.params().is_err());
-        assert!(ImageOperation::CreateCurvesAdjustmentLayer { points: vec![(128, 140), (128, 200)] }.params().is_err());
+        assert!(
+            ImageOperation::CreateCurvesAdjustmentLayer {
+                points: vec![(0, 0)]
+            }
+            .params()
+            .is_err()
+        );
+        assert!(
+            ImageOperation::CreateCurvesAdjustmentLayer {
+                points: vec![(128, 140), (128, 200)]
+            }
+            .params()
+            .is_err()
+        );
     }
 
     #[test]
     fn smart_filter_operations_validate_and_keep_optional_layer_scoping() {
         assert_eq!(
-            ImageOperation::PrepareSmartFilters { layer: Some(7) }.params().unwrap(),
+            ImageOperation::PrepareSmartFilters { layer: Some(7) }
+                .params()
+                .unwrap(),
             json!({"layer": 7})
         );
         assert_eq!(
-            ImageOperation::AddGaussianBlur { radius: 3.0 }.params().unwrap(),
+            ImageOperation::AddGaussianBlur { radius: 3.0 }
+                .params()
+                .unwrap(),
             json!({"radius": 3.0})
         );
-        assert!(ImageOperation::AddGaussianBlur { radius: f64::INFINITY }.params().is_err());
+        assert!(
+            ImageOperation::AddGaussianBlur {
+                radius: f64::INFINITY,
+            }
+            .params()
+            .is_err()
+        );
         assert_eq!(
             ImageOperation::SetSmartFilterParams {
                 layer: Some(4),
                 index: 1,
                 params: json!({"radius": 6}),
-            }.params().unwrap(),
+            }
+            .params()
+            .unwrap(),
             json!({"layer": 4, "index": 1, "params": {"radius": 6}})
         );
-        assert!(ImageOperation::SetSmartFilterParams {
-            layer: None,
-            index: 0,
-            params: json!([]),
-        }.params().is_err());
+        assert!(
+            ImageOperation::SetSmartFilterParams {
+                layer: None,
+                index: 0,
+                params: json!([]),
+            }
+            .params()
+            .is_err()
+        );
         assert_eq!(
-            ImageOperation::ToggleSmartFilters { layer: None, enabled: false }.params().unwrap(),
+            ImageOperation::ToggleSmartFilters {
+                layer: None,
+                enabled: false,
+            }
+            .params()
+            .unwrap(),
             json!({"enabled": false})
         );
         assert_eq!(
-            ImageOperation::MoveSmartFilter { layer: Some(3), index: 0, to: 2 }.params().unwrap(),
+            ImageOperation::MoveSmartFilter {
+                layer: Some(3),
+                index: 0,
+                to: 2,
+            }
+            .params()
+            .unwrap(),
             json!({"layer": 3, "index": 0, "to": 2})
         );
         assert_eq!(
-            ImageOperation::DeleteSmartFilter { layer: None, index: 2 }.params().unwrap(),
+            ImageOperation::DeleteSmartFilter {
+                layer: None,
+                index: 2,
+            }
+            .params()
+            .unwrap(),
             json!({"index": 2})
         );
     }
