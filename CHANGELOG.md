@@ -14,4 +14,4 @@
 
 ### Verification
 
-Foundation CI passed rustfmt and the workspace test suite. The PhotoCraft bridge now includes unit tests for authentication framing, command framing, parameter validation, and upstream error reporting; this change is awaiting CI verification.
+Foundation CI passed rustfmt and the workspace test suite. The PhotoCraft bridge hardening is also verified by [GitHub Actions run 38719515469](https://github.com/Chetan-code-lrca/Example2/actions/runs/38719515469): `cargo fmt --all -- --check` and `cargo test --workspace` passed, including 10 unit tests across core, runtime, and bridge crates plus documentation-test stages.
