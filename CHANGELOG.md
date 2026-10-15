@@ -12,8 +12,10 @@
 - PhotoCraft-authenticated JSON-lines control bridge with request/response validation.
 - Typed image capability crate with six canonical image-edit commands.
 - `praxilume image-commands` catalog discovery command.
+- Root-scoped PhotoCraft open/export commands using `app.open` and `app.save`.
+- Portable path validation for absolute paths, traversal, and drive-qualified paths.
 - CI, protocol schema, security policy, roadmap, and upstream reuse documentation.
 
 ### Verification
 
-Foundation CI passed rustfmt and the workspace test suite. The PhotoCraft bridge hardening passed [GitHub Actions run 38719649555](https://github.com/Chetan-code-lrca/Example2/actions/runs/38719649555). The typed image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726): Rustfmt and workspace tests passed, with 16 unit tests and doc-test stages successful.
+Foundation CI passed rustfmt and the workspace test suite. The PhotoCraft bridge hardening passed [GitHub Actions run 38719649555](https://github.com/Chetan-code-lrca/Example2/actions/runs/38719649555). The typed image command pack passed [GitHub Actions run 38720441726](https://github.com/Chetan-code-lrca/Example2/actions/runs/38720441726): Rustfmt and workspace tests passed, with 16 unit tests and doc-test stages successful. Root-scoped PhotoCraft open/export passed [GitHub Actions run 38721088861](https://github.com/Chetan-code-lrca/Example2/actions/runs/38721088861): Rustfmt and workspace tests passed, with 20 unit tests and doc-test stages successful.
