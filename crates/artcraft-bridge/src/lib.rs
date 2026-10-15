@@ -125,7 +125,7 @@ fn ensure_success(response: &Value, phase: &str) -> Result<()> {
 
 fn write_json_line(stream: &mut TcpStream, value: &Value) -> Result<()> {
     serde_json::to_writer(&mut *stream, value)?;
-    stream.write_all(b"\\n")?;
+    stream.write_all(b"\n")?;
     stream.flush()?;
     Ok(())
 }
