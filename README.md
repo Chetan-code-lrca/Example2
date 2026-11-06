@@ -20,6 +20,44 @@ We reuse specialist engines through explicit adapters instead of rebuilding imag
 - **Atomic project persistence** with a deterministic project layout.
 - **Capability-pack roadmap** for image, vector, video, motion, photo, publishing, and PDF workflows.
 
+## Requirements and quick start
+
+Praxilume is a Rust workspace. The workspace declares **Rust 1.85 or newer** (edition 2024). Install the stable Rust toolchain with [rustup](https://rustup.rs/) so that both `rustc` and `cargo` are available.
+
+Clone the repository and enter its directory:
+
+```bash
+git clone https://github.com/Chetan-code-lrca/Example2.git
+cd Example2
+```
+
+Check formatting, run the workspace tests, and build the CLI:
+
+```bash
+cargo fmt --all -- --check
+cargo test --workspace
+cargo build --release -p praxilume
+```
+
+Run the CLI directly from the workspace without installing it:
+
+```bash
+cargo run -p praxilume -- --help
+cargo run -p praxilume -- init demo.prax --name "First Project"
+cargo run -p praxilume -- inspect demo.prax
+```
+
+To make the `praxilume` command available on your PATH, install the local CLI package:
+
+```bash
+cargo install --path crates/cli
+praxilume --help
+```
+
+The CLI creates or modifies project files at the paths you pass to it. Start with a disposable test directory and inspect each command's help before using it on valuable work.
+
+The commands that connect to PhotoCraft, VectorCraft, or FilmCraft require those separate applications to be installed and their local control interfaces to be enabled. Follow the bridge-specific security notes below before starting an integration. The core project model and CLI can be built and tested without those creative applications.
+
 ## Current milestone
 
 **Phase 2 image editing is verified; Phase 3 now includes live VectorCraft introspection and typed FilmCraft timeline operations with normalized sequence snapshots.**
